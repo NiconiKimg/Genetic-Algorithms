@@ -1,0 +1,21 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Output and temporary folders
+tp1/outputs/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Virtual environments
+venv/
+.env/
+env/
+
+# Ignore notebook outputs (optional, if you want to keep notebooks clean)
+# tp1/notebooks/*.ipynb
