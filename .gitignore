@@ -1,3 +1,6 @@
+# Obsidian vault
+.obsidian/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
@@ -16,6 +19,7 @@ Thumbs.db
 venv/
 .env/
 env/
+
 
 # Ignore notebook outputs (optional, if you want to keep notebooks clean)
 # tp1/notebooks/*.ipynb
