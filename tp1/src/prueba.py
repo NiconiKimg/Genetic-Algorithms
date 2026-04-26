@@ -1,7 +1,7 @@
 from individuo import Individuo
 from poblacion import Poblacion
 from operadores import Operadores
-from metodo_ruleta import Ruleta
+from tp1.src.metodos import Ruleta
 
 
 funcion_objetivo = lambda x: (x/((2 ** 30) - 1)) ** 2

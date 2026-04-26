@@ -17,15 +17,19 @@ class Poblacion:
         self.individuos = nuevos_individuos
     
     def evaluar(self):
-        """Evalúa la población y actualiza las estadísticas."""
-        self.maximo = max(i.valor_funcion_objetivo for i in self.individuos) # del valor de la función objetivo
-        self.minimo = min(i.valor_funcion_objetivo for i in self.individuos) # del valor de la función objetivo
-        self.promedio = sum(i.valor_funcion_objetivo for i in self.individuos) / len(self.individuos) # del valor de la función objetivo
         
-        total_valores = sum(i.valor_funcion_objetivo for i in self.individuos)
+        valores = [i.valor_funcion_objetivo for i in self.individuos]
+        total_valores = sum(valores)
         
-        promedio_fitness = sum(i.fitness(total_valores) for i in self.individuos) / len(self.individuos)
+        for individuo in self.individuos:
+            individuo.calcular_fitness(total_valores)
+            
+        promedio_fitness = sum(i.fitness for i in self.individuos) / len(self.individuos)
         
-        self.desviacion = ((sum(((i.fitness(total_valores) - promedio_fitness) ** 2) for i in self.individuos))/len(self.individuos)) ** 0.5
+        
+        self.desviacion = ((sum(((i.fitness - promedio_fitness) ** 2) for i in self.individuos))/len(self.individuos)) ** 0.5
+        
+        self.maximo = max(valores)
+        self.minimo = min(valores)
+        self.promedio = sum(valores) / len(valores)
 
-        self.desviacion = ((sum(((i.valor_funcion_objetivo/total_valores) - self.promedio) ** 2 for i in self.individuos))/len(self.individuos)) ** 0.5

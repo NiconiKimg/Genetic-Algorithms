@@ -6,6 +6,7 @@ class Individuo:
         self.funcion_objetivo = funcion_objetivo
         self.genes = genes if genes is not None else self.generar()
         self.valor_funcion_objetivo = self.evaluar_funcion_objetivo(funcion_objetivo)
+        self.fitness = None
 
     def generar(self):
         return [random.randint(0, 1) for _ in range(30)]
@@ -18,5 +19,9 @@ class Individuo:
         x = self.decodificar()
         return funcion_objetivo(x)
     
-    def fitness(self, total_funcion_poblacion : float) -> float:
-        return self.valor_funcion_objetivo / total_funcion_poblacion
+    def calcular_fitness(self, total_funcion_poblacion : float) -> float:
+        self.fitness = self.valor_funcion_objetivo / total_funcion_poblacion
+        
+    def actualizar(self):
+        self.valor_funcion_objetivo = self.evaluar_funcion_objetivo(self.funcion_objetivo)
+        
