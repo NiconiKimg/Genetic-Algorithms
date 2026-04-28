@@ -10,7 +10,6 @@ class Seleccion:
 class Ruleta(Seleccion):
   
   def __init__(self):
-    
     self.ruleta : list[Individuo] = []
 
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
@@ -51,17 +50,20 @@ class Torneo(Seleccion):
     competidores = random.sample(poblacion.individuos, self.k)
     return max(competidores, key=lambda ind: ind.fitness)
 
-  class Elitismo(Seleccion):
+class Elitismo(Seleccion):
 
-    def __init__(self, k: int, metodo: Seleccion):
-      self.k = k
-      self.metodo = metodo
-      
-    def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
-      poblacion_ordenada = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)
-      elite = poblacion_ordenada[:self.k]
-      poblacion_sin_elite = poblacion_ordenada[self.k:]
+  def __init__(self, k: int, metodo: Seleccion):
+    self.k = k
+    self.metodo = metodo
+    
+  def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
+    elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)[:self.k]
 
-      seleccionados = self.metodo.seleccionar(poblacion_sin_elite)
-      
-      return elite + seleccionados
+    for e in elite:
+      poblacion.individuos.remove(e)
+
+    seleccionados = self.metodo.seleccionar(poblacion)
+    
+    temp = elite + seleccionados
+
+    return elite + seleccionados

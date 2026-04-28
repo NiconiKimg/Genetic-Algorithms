@@ -22,7 +22,7 @@ class Operadores:
             self.mutacion(hijo2)
             hijo2.actualizar()
             poblacion[i + 1] = hijo2
-            
+
         return poblacion
 
     def crossover(self, padre1, padre2):  

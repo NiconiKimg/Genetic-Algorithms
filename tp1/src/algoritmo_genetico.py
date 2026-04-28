@@ -23,7 +23,7 @@ class Algoritmo_Genetico:
       for _ in range(self.ciclos):
         
         self.poblacion.evaluar()
-        
+
         self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion)
 
         seleccionados = self.seleccion.seleccionar(self.poblacion)
@@ -31,6 +31,7 @@ class Algoritmo_Genetico:
         nueva_poblacion = self.operadores.aplicar(seleccionados, self.cantidad_elite)
         
         self.poblacion.pasar_generacion(nueva_poblacion)
+
         
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
