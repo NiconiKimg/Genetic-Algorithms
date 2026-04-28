@@ -8,8 +8,8 @@ class Operadores:
         self.prob_mutacion = prob_mutacion
         self.funcion_objetivo = funcion_objetivo
 
-    def aplicar(self, poblacion : list[Individuo]) -> list[Individuo]:
-        for i in range(0, len(poblacion), 2):
+    def aplicar(self, poblacion : list[Individuo], cantidad_elite : int = 0) -> list[Individuo]:
+        for i in range(0 + cantidad_elite, len(poblacion), 2):
             padre1 = poblacion[i]
             padre2 = poblacion[i + 1]
 

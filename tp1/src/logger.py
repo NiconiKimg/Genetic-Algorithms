@@ -7,9 +7,21 @@ class Logger:
         self.historial = [] #Lista de tuplas para minimo, maximo y promedio de cada ciclo
         # Para mostrar resultados y graficos
         self.df_historial = pd.DataFrame(columns=['Ciclo', 'Minimo', 'Maximo', 'Promedio','Desviacion'])
+    
+    
     def agregar_datos(self, minimo, maximo, promedio, desviacion):
         self.historial.append((minimo, maximo, promedio, desviacion))
-        self.df_historial = self.df_historial.append({'Ciclo': len(self.historial), 'Minimo': minimo, 'Maximo': maximo, 'Promedio': promedio,'Desviacion':desviacion}, ignore_index=True)
+        nueva_fila = pd.DataFrame([{
+        'Ciclo': len(self.historial), 
+        'Minimo': minimo, 
+        'Maximo': maximo, 
+        'Promedio': promedio, 
+        'Desviacion': desviacion
+    }])
+    
+        # Concatenas el nuevo registro al DataFrame existente
+        self.df_historial = pd.concat([self.df_historial, nueva_fila], ignore_index=True)
+
 
 
     def export_datos(self, filename):

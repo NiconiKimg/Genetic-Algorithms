@@ -6,27 +6,29 @@ from logger import Logger
 
 class Algoritmo_Genetico:
   
-    def __init__(self, poblacion: Poblacion, operadores: Operadores, metodo: Seleccion, ciclos: int):
+    def __init__(self, poblacion: Poblacion, operadores: Operadores, metodo: Seleccion, ciclos: int, cantidad_elite: int = 0):
       self.poblacion = poblacion
       self.operadores = operadores
       self.seleccion = metodo
       self.ciclos = ciclos
       self.historial = []
       self.tiempo_ejecucion = 0.0
+      self.cantidad_elite = cantidad_elite
       self.logger = Logger()
     
     def correr(self):
       
       tiempo_inicio = perf_counter()
       
-      for ciclo in range(self.ciclos):
+      for _ in range(self.ciclos):
+        
         self.poblacion.evaluar()
         
         self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion)
 
         seleccionados = self.seleccion.seleccionar(self.poblacion)
         
-        nueva_poblacion = self.operadores.aplicar(seleccionados)
+        nueva_poblacion = self.operadores.aplicar(seleccionados, self.cantidad_elite)
         
         self.poblacion.pasar_generacion(nueva_poblacion)
         
