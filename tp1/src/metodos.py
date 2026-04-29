@@ -59,6 +59,8 @@ class Torneo(Seleccion):
     for _ in range(self.k):
       index = random.randint(0, len(poblacion) - 1)
       competidores.append(poblacion[index])
+    return competidores
+
 class Elitismo(Seleccion):
 
   def __init__(self, k: int, metodo: Seleccion):

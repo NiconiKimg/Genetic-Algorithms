@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 class Logger:
     def __init__(self):
@@ -24,18 +25,23 @@ class Logger:
 
 
 
-    def export_datos(self, filename):
+    def export_datos(self, directorio_salida, nombre_base):
         """Exporta el historial a una tabla y a graficos"""
 
+        os.makedirs(directorio_salida, exist_ok=True)
+
         plot = Plot_Writer()
-        plot.preparar_grafico(titulo="Evolución de la población", xlabel="Ciclo", ylabel="Minimo, Máximo Promedio, Desviación")
+        plot.preparar_grafico(titulo=f"Evolución - {nombre_base}", xlabel="Ciclo", ylabel="Métricas")
+
+        # Generar rutas dinámicas
+        ruta_csv = os.path.join(directorio_salida, f"{nombre_base}_stats.csv")
+        ruta_grafico = os.path.join(directorio_salida, f"{nombre_base}_grafico.png")
+
         #Exportar a tabla
-        self.df_historial.to_csv(filename, index=False) # Ver si es necesario el Table_Writer
+        self.df_historial.to_csv(ruta_csv, index=False) 
 
         #Exportar a grafico
-        plot.export_grafico(self.df_historial, 'Ciclo', ['Minimo', 'Maximo', 'Promedio','Desviacion'])
-
-        
+        plot.export_grafico(self.df_historial, 'Ciclo', ['Minimo', 'Maximo', 'Promedio','Desviacion'], filename=ruta_grafico)
 
 class Plot_Writer:
     def __init__(self):

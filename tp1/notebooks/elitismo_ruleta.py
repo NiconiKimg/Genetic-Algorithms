@@ -22,6 +22,7 @@ PROBABILIDAD_MUTACION = 0.05
 FUNCION_OBJETIVO = lambda x: (x / (2**30 - 1)) ** 2
 TAMAÑO_POBLACION_A = 10
 TAMAÑO_ELITE = 2
+DIR_SALIDA = BASE_DIR / "outputs" / "elitismo_ruleta"
 
 #INSTANCIAS GLOBALES
 ruleta = Ruleta()
@@ -35,7 +36,7 @@ poblacion_a = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
 algoritmo_genetico_a = Algoritmo_Genetico(poblacion_a, operadores, elitismo, CICLOS, TAMAÑO_ELITE)
 
 #EJEMPLO DE USO -> Luego se reemplazará por el logger y las clases que impriman
-algoritmo_genetico_a.correr()
+algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="elitismo_ruleta_100_ciclos")
 
 #MUESTRA DE RESULTADOS
 print("RESULTADOS")

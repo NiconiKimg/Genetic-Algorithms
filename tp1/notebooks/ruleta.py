@@ -21,6 +21,7 @@ PROBABILIDAD_CROSSOVER = 0.75
 PROBABILIDAD_MUTACION = 0.05
 FUNCION_OBJETIVO = lambda x: (x / (2**30 - 1)) ** 2
 TAMAÑO_POBLACION_A = 10
+DIR_SALIDA = BASE_DIR / "outputs" / "ruleta"
 
 #INSTANCIAS GLOBALES
 ruleta = Ruleta()
@@ -48,9 +49,9 @@ poblacion_c = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
 algoritmo_genetico_c = Algoritmo_Genetico(poblacion_c, operadores, ruleta, CICLOS_C)
 
 #EJEMPLO DE USO -> Luego se reemplazará por el logger y las clases que impriman
-algoritmo_genetico_a.correr()
-algoritmo_genetico_b.correr()
-algoritmo_genetico_c.correr()
+algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_20_ciclos")
+algoritmo_genetico_b.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_100_ciclos")
+algoritmo_genetico_c.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_200_ciclos")
 
 #MUESTRA DE RESULTADOS
 print("ETAPA A")

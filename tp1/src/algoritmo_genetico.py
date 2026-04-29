@@ -16,7 +16,7 @@ class Algoritmo_Genetico:
       self.cantidad_elite = cantidad_elite
       self.logger = Logger()
     
-    def correr(self):
+    def correr(self, directorio_salida="outputs", nombre_base="corrida"):
       
       tiempo_inicio = perf_counter()
       
@@ -37,4 +37,4 @@ class Algoritmo_Genetico:
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
     
       # aca ya exportamos los datos a csv y graficos u otros formatos
-      self.logger.export_datos("corrida_algoritmo_genetico.csv")
+      self.logger.export_datos(directorio_salida, nombre_base)
