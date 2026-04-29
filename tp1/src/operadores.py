@@ -41,7 +41,26 @@ class Operadores:
         return Individuo(self.funcion_objetivo, genes_hijo1), Individuo(self.funcion_objetivo, genes_hijo2)
 
     def mutacion(self, individuo):
+        if (random() < self.prob_mutacion):
+            indice = randint(0, len(individuo.genes) - 1)
+            individuo.genes[indice] = 1 if individuo.genes[indice] == 0 else 0
+
+
+'''
+    if (random() < self.prob_mutacion):
+            indice_a = randint(0, len(individuo.genes) - 1)
+            indice_b = randint(0, len(individuo.genes) - 1)
+
+            if (indice_a > indice_b):
+                indice_a, indice_b = indice_b, indice_a
+            
+            individuo.genes[indice_a:indice_b] = individuo.genes[indice_a:indice_b][::-1]
+'''
         
+
+
+'''
         for i in range(len(individuo.genes)):
             if (random() < self.prob_mutacion):
                 individuo.genes[i] = 1 if individuo.genes[i] == 0 else 0
+        '''

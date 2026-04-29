@@ -26,7 +26,6 @@ class Ruleta(Seleccion):
     for individuo in poblacion.individuos:
       acumulado += individuo.fitness
       self.ruleta.append((acumulado,individuo))
-  
     
   def girar_ruleta(self) -> Individuo:
     valor_aleatorio = random.random()
