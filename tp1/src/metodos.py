@@ -30,9 +30,14 @@ class Ruleta(Seleccion):
   def girar_ruleta(self) -> Individuo:
     valor_aleatorio = random.random()
     acumulados = [x[0] for x in self.ruleta]
-    index = bisect.bisect_left(acumulados, valor_aleatorio)
-    index = min(index, len(self.ruleta) - 1)
+    index = self.buscar_indice_ganador(acumulados, valor_aleatorio)
     return self.ruleta[index][1]
+  
+  def buscar_indice_ganador(self, acumulados: list[float], valor_aleatorio: float) -> int:
+    index = 0
+    while index < len(acumulados) and acumulados[index] < valor_aleatorio:
+      index += 1
+    return min(index, len(acumulados) - 1)
   
 class Torneo(Seleccion):
 
@@ -46,9 +51,14 @@ class Torneo(Seleccion):
     return seleccionados
 
   def realizar_torneo(self, poblacion: Poblacion) -> Individuo:
-    competidores = random.sample(poblacion.individuos, self.k)
+    competidores = self.tomar_competidores(poblacion.individuos)
     return max(competidores, key=lambda ind: ind.fitness)
 
+  def tomar_competidores(self, poblacion: list[Individuo]) -> list[Individuo]:
+    competidores = []
+    for _ in range(self.k):
+      index = random.randint(0, len(poblacion) - 1)
+      competidores.append(poblacion[index])
 class Elitismo(Seleccion):
 
   def __init__(self, k: int, metodo: Seleccion):
