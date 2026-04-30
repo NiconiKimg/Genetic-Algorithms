@@ -1,7 +1,6 @@
 from poblacion import Poblacion
 from individuo import Individuo
 import random
-import bisect
 
 class Seleccion:
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
@@ -70,11 +69,11 @@ class Elitismo(Seleccion):
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
     elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)[:self.k]
 
-    for e in elite:
-      poblacion.individuos.remove(e)
+    resto = [individuo for individuo in poblacion.individuos if individuo not in elite]
 
-    seleccionados = self.metodo.seleccionar(poblacion)
+    poblacion_temporal = Poblacion(0, poblacion.funcion_objetivo)
+    poblacion_temporal.individuos = resto
     
-    temp = elite + seleccionados
+    seleccionados = self.metodo.seleccionar(poblacion_temporal)
 
     return elite + seleccionados

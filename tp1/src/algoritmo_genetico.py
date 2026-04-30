@@ -32,7 +32,10 @@ class Algoritmo_Genetico:
         
         self.poblacion.pasar_generacion(nueva_poblacion)
 
-        
+      self.poblacion.evaluar()
+      self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion)
+
+       
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
     
