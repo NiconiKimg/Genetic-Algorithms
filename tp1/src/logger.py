@@ -43,6 +43,22 @@ class Logger:
         #Exportar a grafico
         plot.export_grafico(self.df_historial, 'Ciclo', ['Minimo', 'Maximo', 'Promedio','Desviacion'], filename=ruta_grafico)
 
+    def export_metadata(self, directorio_salida, nombre_base, tiempo_ejecucion, aptitud_maxima):
+        """Exporta metadata con información de tiempo, aptitud máxima y desviación estándar promedio"""
+        
+        os.makedirs(directorio_salida, exist_ok=True)
+        
+        ruta_metadata = os.path.join(directorio_salida, f"{nombre_base}_metadata.txt")
+        
+        # Calcular desviación estándar promedio
+        desviacion_promedio = self.df_historial['Desviacion'].mean()
+        
+        with open(ruta_metadata, 'w') as f:
+            f.write(f"Ejecución: {nombre_base}\n")
+            f.write(f"Tiempo de Computo: {tiempo_ejecucion:.6f} segundos\n")
+            f.write(f"Aptitud Máxima: {aptitud_maxima:.10f}\n")
+            f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
+
 class Plot_Writer:
     def __init__(self):
         self.fig = None

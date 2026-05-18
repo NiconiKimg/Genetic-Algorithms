@@ -3,7 +3,7 @@ from individuo import Individuo
 
 class Operadores:
 
-    def init(self, prob_crossover, prob_mutacion, funcion_objetivo):
+    def __init__(self, prob_crossover, prob_mutacion, funcion_objetivo):
         self.prob_crossover = prob_crossover
         self.prob_mutacion = prob_mutacion
         self.funcion_objetivo = funcion_objetivo

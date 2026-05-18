@@ -41,3 +41,4 @@ class Algoritmo_Genetico:
     
       # aca ya exportamos los datos a csv y graficos u otros formatos
       self.logger.export_datos(directorio_salida, nombre_base)
+      self.logger.export_metadata(directorio_salida, nombre_base, self.tiempo_ejecucion, self.poblacion.maximo)
