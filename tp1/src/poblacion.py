@@ -32,4 +32,3 @@ class Poblacion:
         self.maximo = max(valores)
         self.minimo = min(valores)
         self.promedio = sum(valores) / len(valores)
-

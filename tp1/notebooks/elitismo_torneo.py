@@ -32,7 +32,6 @@ operadores = Operadores(PROBABILIDAD_CROSSOVER, PROBABILIDAD_MUTACION, FUNCION_O
 
 CICLOS = 100
 
-
 #INSTANCIAS
 poblacion_a = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
 algoritmo_genetico_a = Algoritmo_Genetico(poblacion_a, operadores, elitismo, CICLOS, TAMAÑO_ELITE)
