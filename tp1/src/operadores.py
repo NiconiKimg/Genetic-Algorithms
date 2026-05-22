@@ -54,7 +54,22 @@ class Operadores:
 
         return Individuo(self.funcion_objetivo, genes_hijo1), Individuo(self.funcion_objetivo, genes_hijo2)
 
+    # Mutación Puntual Única (Original)
     def mutacion(self, individuo):
         if (random() < self.prob_mutacion):
             indice = randint(0, len(individuo.genes) - 1)
             individuo.genes[indice] = 1 if individuo.genes[indice] == 0 else 0
+
+    # Mutación Bit a Bit
+    # def mutacion(self, individuo):
+    #     for i in range(len(individuo.genes)):
+    #         if (random() < self.prob_mutacion):
+    #             individuo.genes[i] = 1 if individuo.genes[i] == 0 else 0
+
+    # Mutación por Inversión
+    # def mutacion(self, individuo):
+    #     if (random() < self.prob_mutacion):
+    #         n = len(individuo.genes)
+    #         idx1 = randint(0, n - 2)
+    #         idx2 = randint(idx1 + 1, n - 1)
+    #         individuo.genes[idx1:idx2+1] = list(reversed(individuo.genes[idx1:idx2+1]))

@@ -7,18 +7,24 @@ class Logger:
         # Para debug
         self.historial = [] #Lista de tuplas para minimo, maximo y promedio de cada ciclo
         # Para mostrar resultados y graficos
-        self.df_historial = pd.DataFrame(columns=['Ciclo', 'Minimo', 'Maximo', 'Promedio','Desviacion'])
+        self.df_historial = pd.DataFrame(columns=[
+            'Ciclo', 'Minimo', 'Maximo', 'Promedio', 'Desviacion', 
+            'Mejor_Cromosoma', 'Mejor_Valor_Obj', 'Mejor_Fitness'
+        ])
     
-    
-    def agregar_datos(self, minimo, maximo, promedio, desviacion):
-        self.historial.append((minimo, maximo, promedio, desviacion))
+    def agregar_datos(self, minimo, maximo, promedio, desviacion, mejor_individuo):
+        self.historial.append((minimo, maximo, promedio, desviacion, mejor_individuo))
+        genes_str = "".join(str(g) for g in mejor_individuo.genes)
         nueva_fila = pd.DataFrame([{
-        'Ciclo': len(self.historial), 
-        'Minimo': minimo, 
-        'Maximo': maximo, 
-        'Promedio': promedio, 
-        'Desviacion': desviacion
-    }])
+            'Ciclo': len(self.historial), 
+            'Minimo': minimo, 
+            'Maximo': maximo, 
+            'Promedio': promedio, 
+            'Desviacion': desviacion,
+            'Mejor_Cromosoma': genes_str,
+            'Mejor_Valor_Obj': mejor_individuo.valor_funcion_objetivo,
+            'Mejor_Fitness': mejor_individuo.fitness
+        }])
     
         # Concatenas el nuevo registro al DataFrame existente
         self.df_historial = pd.concat([self.df_historial, nueva_fila], ignore_index=True)
@@ -33,15 +39,16 @@ class Logger:
         plot = Plot_Writer()
         plot.preparar_grafico(titulo=f"Evolución - {nombre_base}", xlabel="Ciclo", ylabel="Métricas")
 
-        # Generar rutas dinámicas
         ruta_csv = os.path.join(directorio_salida, f"{nombre_base}_stats.csv")
+        ruta_tabla_md = os.path.join(directorio_salida, f"{nombre_base}_tabla_elegante.md")
         ruta_grafico = os.path.join(directorio_salida, f"{nombre_base}_grafico.png")
+        ruta_convergencia = os.path.join(directorio_salida, f"{nombre_base}_convergencia.png")
 
-        #Exportar a tabla
-        self.df_historial.to_csv(ruta_csv, index=False) 
+        table_writer = Table_Writer()
+        table_writer.exportar_tabla(self.df_historial, ruta_csv, ruta_tabla_md)
 
-        #Exportar a grafico
         plot.export_grafico(self.df_historial, 'Ciclo', ['Minimo', 'Maximo', 'Promedio','Desviacion'], filename=ruta_grafico)
+        plot.export_grafico_convergencia(self.df_historial, filename=ruta_convergencia)
 
     def export_metadata(self, directorio_salida, nombre_base, tiempo_ejecucion, aptitud_maxima):
         """Exporta metadata con información de tiempo, aptitud máxima y desviación estándar promedio"""
@@ -85,10 +92,70 @@ class Plot_Writer:
         self.fig.savefig(filename)
         plt.close(self.fig)
 
+    def export_grafico_convergencia(self, df, filename):
+        """Genera un gráfico de doble eje Y que analiza la convergencia frente a la diversidad"""
+        fig, ax1 = plt.subplots(figsize=(8, 5))
+
+        color = 'forestgreen'
+        ax1.set_xlabel('Ciclo / Generación', fontsize=10)
+        ax1.set_ylabel('Aptitud (Máxima y Promedio)', color=color, fontsize=10)
+        line1 = ax1.plot(df['Ciclo'], df['Maximo'], color=color, linewidth=2, label='Mejor Aptitud (Max)')
+        line2 = ax1.plot(df['Ciclo'], df['Promedio'], color='darkorange', linewidth=1.5, linestyle='-', label='Aptitud Promedio (Mean)')
+        ax1.tick_params(axis='y', labelcolor=color)
+        ax1.set_ylim(-0.05, 1.05)
+        ax1.grid(True, linestyle=':', alpha=0.5)
+
+        line3 = ax1.axhline(y=1.0, color='crimson', linestyle='--', linewidth=1.5, label='Óptimo Global Teórico (1.0)')
+
+        ax2 = ax1.twinx()
+        color2 = 'purple'
+        ax2.set_ylabel('Diversidad (Desviación Estándar)', color=color2, fontsize=10)
+        line4 = ax2.plot(df['Ciclo'], df['Desviacion'], color=color2, linewidth=1.8, linestyle=':', label='Desviación Estándar (StdDev)')
+        ax2.tick_params(axis='y', labelcolor=color2)
+        
+        lines = line1 + line2 + [line3] + line4
+        labels = [l.get_label() for l in lines]
+        ax1.legend(lines, labels, loc='center right', frameon=True, framealpha=0.9, shadow=True)
+
+        plt.title('Dinámica de Convergencia: Progreso de Aptitud vs. Pérdida de Diversidad', fontsize=11, fontweight='bold', pad=15)
+        fig.tight_layout()
+        fig.savefig(filename, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+
         
 class Table_Writer:
     def __init__(self):
         pass
+
+    def exportar_tabla(self, df, filepath_csv, filepath_md):
+        """Exporta la tabla a CSV y genera un reporte Markdown con formato elegante"""
+        df.to_csv(filepath_csv, index=False)
+
+        df_formatted = df.copy()
+        
+        float_cols = ['Minimo', 'Maximo', 'Promedio', 'Desviacion', 'Mejor_Valor_Obj', 'Mejor_Fitness']
+        for col in float_cols:
+            if col in df_formatted.columns:
+                df_formatted[col] = df_formatted[col].map(lambda x: f"{x:.8f}" if isinstance(x, (int, float)) else x)
+        
+        headers = list(df_formatted.columns)
+        header_line = "| " + " | ".join(headers) + " |"
+        separator_line = "| " + " | ".join([" :---: " for _ in headers]) + " |"
+        
+        lines = [
+            f"# Reporte de Evolución Poblacional\n",
+            f"Estadísticas detalladas del algoritmo genético por cada ciclo/generación:\n",
+            header_line,
+            separator_line
+        ]
+        
+        for _, row in df_formatted.iterrows():
+            row_str = "| " + " | ".join(str(val) for val in row) + " |"
+            lines.append(row_str)
+            
+        with open(filepath_md, 'w', encoding='utf-8') as f:
+            f.write("\n".join(lines))
+            f.write("\n")
 
 
 

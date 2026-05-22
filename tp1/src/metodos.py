@@ -40,34 +40,46 @@ class Ruleta(Seleccion):
   
 class Torneo(Seleccion):
 
-  def __init__(self, k: int):
+  def __init__(self, k):
     self.k = k
 
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
+    n_poblacion = len(poblacion.individuos)
+    if isinstance(self.k, float) and 0.0 < self.k <= 1.0:
+      k_real = max(2, round(self.k * n_poblacion))
+    else:
+      k_real = int(self.k)
+
     seleccionados = []
-    for _ in range(len(poblacion.individuos)):
-      seleccionados.append(self.realizar_torneo(poblacion))
+    for _ in range(n_poblacion):
+      seleccionados.append(self.realizar_torneo(poblacion, k_real))
     return seleccionados
 
-  def realizar_torneo(self, poblacion: Poblacion) -> Individuo:
-    competidores = self.tomar_competidores(poblacion.individuos)
+  def realizar_torneo(self, poblacion: Poblacion, k_real: int) -> Individuo:
+    competidores = self.tomar_competidores(poblacion.individuos, k_real)
     return max(competidores, key=lambda ind: ind.fitness)
 
-  def tomar_competidores(self, poblacion: list[Individuo]) -> list[Individuo]:
+  def tomar_competidores(self, poblacion: list[Individuo], k_real: int) -> list[Individuo]:
     competidores = []
-    for _ in range(self.k):
+    for _ in range(k_real):
       index = random.randint(0, len(poblacion) - 1)
       competidores.append(poblacion[index])
     return competidores
 
 class Elitismo(Seleccion):
 
-  def __init__(self, k: int, metodo: Seleccion):
+  def __init__(self, k, metodo: Seleccion):
     self.k = k
     self.metodo = metodo
     
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
-    elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)[:self.k]
+    n_poblacion = len(poblacion.individuos)
+    if isinstance(self.k, float) and 0.0 < self.k <= 1.0:
+      k_real = max(1, round(self.k * n_poblacion))
+    else:
+      k_real = int(self.k)
+
+    elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)[:k_real]
 
     resto = [individuo for individuo in poblacion.individuos if individuo not in elite]
 

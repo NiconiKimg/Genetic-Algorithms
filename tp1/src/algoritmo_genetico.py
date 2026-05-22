@@ -24,21 +24,28 @@ class Algoritmo_Genetico:
         
         self.poblacion.evaluar()
 
-        self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion)
+        mejor_ind = self.poblacion.obtener_mejores(1)[0]
+        self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion, mejor_ind)
 
         seleccionados = self.seleccion.seleccionar(self.poblacion)
         
-        nueva_poblacion = self.operadores.aplicar(seleccionados, self.cantidad_elite)
+        n_poblacion = len(self.poblacion.individuos)
+        if isinstance(self.cantidad_elite, float) and 0.0 < self.cantidad_elite <= 1.0:
+            elite_real = max(1, round(self.cantidad_elite * n_poblacion))
+        else:
+            elite_real = int(self.cantidad_elite)
+            
+        nueva_poblacion = self.operadores.aplicar(seleccionados, elite_real)
         
         self.poblacion.pasar_generacion(nueva_poblacion)
 
       self.poblacion.evaluar()
-      self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion)
+      mejor_ind = self.poblacion.obtener_mejores(1)[0]
+      self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion, mejor_ind)
 
        
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
     
-      # aca ya exportamos los datos a csv y graficos u otros formatos
       self.logger.export_datos(directorio_salida, nombre_base)
       self.logger.export_metadata(directorio_salida, nombre_base, self.tiempo_ejecucion, self.poblacion.maximo)
