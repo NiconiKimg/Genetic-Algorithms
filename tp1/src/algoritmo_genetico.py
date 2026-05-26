@@ -1,3 +1,5 @@
+from pathlib import Path
+from typing import Any
 from poblacion import Poblacion
 from operadores import Operadores
 from metodos import Seleccion
@@ -5,8 +7,16 @@ from time import perf_counter
 from logger import Logger
 
 class Algoritmo_Genetico:
+    poblacion: Poblacion
+    operadores: Operadores
+    seleccion: Seleccion
+    ciclos: int
+    historial: list[Any]
+    tiempo_ejecucion: float
+    cantidad_elite: int | float
+    logger: Logger
   
-    def __init__(self, poblacion: Poblacion, operadores: Operadores, metodo: Seleccion, ciclos: int, cantidad_elite: int = 0):
+    def __init__(self, poblacion: Poblacion, operadores: Operadores, metodo: Seleccion, ciclos: int, cantidad_elite: int | float = 0) -> None:
       self.poblacion = poblacion
       self.operadores = operadores
       self.seleccion = metodo
@@ -16,7 +26,7 @@ class Algoritmo_Genetico:
       self.cantidad_elite = cantidad_elite
       self.logger = Logger()
     
-    def correr(self, directorio_salida="outputs", nombre_base="corrida"):
+    def correr(self, directorio_salida: str | Path = "outputs", nombre_base: str = "corrida") -> None:
       
       tiempo_inicio = perf_counter()
       
@@ -25,7 +35,13 @@ class Algoritmo_Genetico:
         self.poblacion.evaluar()
 
         mejor_ind = self.poblacion.obtener_mejores(1)[0]
-        self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion, mejor_ind)
+        self.logger.agregar_datos(
+            self.poblacion.minimo if self.poblacion.minimo is not None else 0.0,
+            self.poblacion.maximo if self.poblacion.maximo is not None else 0.0,
+            self.poblacion.promedio if self.poblacion.promedio is not None else 0.0,
+            self.poblacion.desviacion if self.poblacion.desviacion is not None else 0.0,
+            mejor_ind
+        )
 
         seleccionados = self.seleccion.seleccionar(self.poblacion)
         
@@ -41,11 +57,17 @@ class Algoritmo_Genetico:
 
       self.poblacion.evaluar()
       mejor_ind = self.poblacion.obtener_mejores(1)[0]
-      self.logger.agregar_datos(self.poblacion.minimo, self.poblacion.maximo, self.poblacion.promedio, self.poblacion.desviacion, mejor_ind)
+      self.logger.agregar_datos(
+          self.poblacion.minimo if self.poblacion.minimo is not None else 0.0,
+          self.poblacion.maximo if self.poblacion.maximo is not None else 0.0,
+          self.poblacion.promedio if self.poblacion.promedio is not None else 0.0,
+          self.poblacion.desviacion if self.poblacion.desviacion is not None else 0.0,
+          mejor_ind
+      )
 
        
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
     
-      self.logger.export_datos(directorio_salida, nombre_base)
-      self.logger.export_metadata(directorio_salida, nombre_base, self.tiempo_ejecucion, self.poblacion.maximo)
+      self.logger.export_datos(str(directorio_salida), nombre_base)
+      self.logger.export_metadata(str(directorio_salida), nombre_base, self.tiempo_ejecucion, self.poblacion.maximo if self.poblacion.maximo is not None else 0.0)

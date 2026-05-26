@@ -1,9 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+from typing import Optional, Any
+from individuo import Individuo
 
 class Logger:
-    def __init__(self):
+    historial: list[tuple[float, float, float, float, Individuo]]
+    df_historial: pd.DataFrame
+
+    def __init__(self) -> None:
         # Para debug
         self.historial = [] #Lista de tuplas para minimo, maximo y promedio de cada ciclo
         # Para mostrar resultados y graficos
@@ -12,7 +17,7 @@ class Logger:
             'Mejor_Cromosoma', 'Mejor_Valor_Obj', 'Mejor_Fitness'
         ])
     
-    def agregar_datos(self, minimo, maximo, promedio, desviacion, mejor_individuo):
+    def agregar_datos(self, minimo: float, maximo: float, promedio: float, desviacion: float, mejor_individuo: Individuo) -> None:
         self.historial.append((minimo, maximo, promedio, desviacion, mejor_individuo))
         genes_str = "".join(str(g) for g in mejor_individuo.genes)
         nueva_fila = pd.DataFrame([{
@@ -31,7 +36,7 @@ class Logger:
 
 
 
-    def export_datos(self, directorio_salida, nombre_base):
+    def export_datos(self, directorio_salida: str, nombre_base: str) -> None:
         """Exporta el historial a una tabla y a graficos"""
 
         os.makedirs(directorio_salida, exist_ok=True)
@@ -50,7 +55,7 @@ class Logger:
         plot.export_grafico(self.df_historial, 'Ciclo', ['Minimo', 'Maximo', 'Promedio','Desviacion'], filename=ruta_grafico)
         plot.export_grafico_convergencia(self.df_historial, filename=ruta_convergencia)
 
-    def export_metadata(self, directorio_salida, nombre_base, tiempo_ejecucion, aptitud_maxima):
+    def export_metadata(self, directorio_salida: str, nombre_base: str, tiempo_ejecucion: float, aptitud_maxima: float) -> None:
         """Exporta metadata con información de tiempo, aptitud máxima y desviación estándar promedio"""
         
         os.makedirs(directorio_salida, exist_ok=True)
@@ -58,7 +63,7 @@ class Logger:
         ruta_metadata = os.path.join(directorio_salida, f"{nombre_base}_metadata.txt")
         
         # Calcular desviación estándar promedio
-        desviacion_promedio = self.df_historial['Desviacion'].mean()
+        desviacion_promedio = float(self.df_historial['Desviacion'].mean())
         
         with open(ruta_metadata, 'w') as f:
             f.write(f"Ejecución: {nombre_base}\n")
@@ -67,11 +72,14 @@ class Logger:
             f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
 
 class Plot_Writer:
-    def __init__(self):
+    fig: Optional[Any]
+    ax: Optional[Any]
+
+    def __init__(self) -> None:
         self.fig = None
         self.ax = None
 
-    def preparar_grafico(self, titulo="", xlabel="", ylabel="", figsize=(8,5)):
+    def preparar_grafico(self, titulo: str = "", xlabel: str = "", ylabel: str = "", figsize: tuple[int, int] = (8,5)) -> None:
         self.fig, self.ax = plt.subplots(figsize=figsize)
 
         self.ax.set_title(titulo)
@@ -79,8 +87,8 @@ class Plot_Writer:
         self.ax.set_ylabel(ylabel)
         self.ax.grid(True)
 
-    def export_grafico(self, df, x_col, y_cols, filename="grafico.png"):
-        if self.ax is None:
+    def export_grafico(self, df: pd.DataFrame, x_col: str, y_cols: list[str], filename: str = "grafico.png") -> None:
+        if self.ax is None or self.fig is None:
             raise Exception("Primero llamá a preparar_grafico()")
 
         x = df[x_col]
@@ -92,7 +100,7 @@ class Plot_Writer:
         self.fig.savefig(filename)
         plt.close(self.fig)
 
-    def export_grafico_convergencia(self, df, filename):
+    def export_grafico_convergencia(self, df: pd.DataFrame, filename: str) -> None:
         """Genera un gráfico de doble eje Y que analiza la convergencia frente a la diversidad"""
         fig, ax1 = plt.subplots(figsize=(8, 5))
 
@@ -124,11 +132,11 @@ class Plot_Writer:
 
         
 class Table_Writer:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def exportar_tabla(self, df, filepath_csv, filepath_md):
-        """Exporta la tabla a CSV y genera un reporte Markdown con formato elegante"""
+    def exportar_tabla(self, df: pd.DataFrame, filepath_csv: str, filepath_md: str) -> None:
+        """Exporta la tabla a CSV y genera un reporte Markdown"""
         df.to_csv(filepath_csv, index=False)
 
         df_formatted = df.copy()

@@ -1,9 +1,13 @@
 from random import random, randint
+from typing import Callable
 from individuo import Individuo
 
 class Operadores:
+    prob_crossover: float
+    prob_mutacion: float
+    funcion_objetivo: Callable[[int], float]
 
-    def __init__(self, prob_crossover, prob_mutacion, funcion_objetivo):
+    def __init__(self, prob_crossover: float, prob_mutacion: float, funcion_objetivo: Callable[[int], float]) -> None:
         self.prob_crossover = prob_crossover
         self.prob_mutacion = prob_mutacion
         self.funcion_objetivo = funcion_objetivo
@@ -39,7 +43,7 @@ class Operadores:
 
         return poblacion
 
-    def crossover(self, padre1, padre2):
+    def crossover(self, padre1: Individuo, padre2: Individuo) -> tuple[Individuo, Individuo]:
 
         if (random() < self.prob_crossover):
             cantidad_genes = len(padre1.genes)
@@ -55,19 +59,19 @@ class Operadores:
         return Individuo(self.funcion_objetivo, genes_hijo1), Individuo(self.funcion_objetivo, genes_hijo2)
 
     # Mutación Puntual Única (Original)
-    def mutacion(self, individuo):
+    def mutacion(self, individuo: Individuo) -> None:
         if (random() < self.prob_mutacion):
             indice = randint(0, len(individuo.genes) - 1)
             individuo.genes[indice] = 1 if individuo.genes[indice] == 0 else 0
 
     # Mutación Bit a Bit
-    # def mutacion(self, individuo):
+    # def mutacion(self, individuo: Individuo) -> None:
     #     for i in range(len(individuo.genes)):
     #         if (random() < self.prob_mutacion):
     #             individuo.genes[i] = 1 if individuo.genes[i] == 0 else 0
 
     # Mutación por Inversión
-    # def mutacion(self, individuo):
+    # def mutacion(self, individuo: Individuo) -> None:
     #     if (random() < self.prob_mutacion):
     #         n = len(individuo.genes)
     #         idx1 = randint(0, n - 2)

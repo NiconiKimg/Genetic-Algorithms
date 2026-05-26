@@ -7,9 +7,10 @@ class Seleccion:
     raise NotImplementedError
 
 class Ruleta(Seleccion):
+  ruleta: list[tuple[float, Individuo]]
   
-  def __init__(self):
-    self.ruleta : list[Individuo] = []
+  def __init__(self) -> None:
+    self.ruleta = []
 
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
     self.armar_ruleta(poblacion)
@@ -18,12 +19,13 @@ class Ruleta(Seleccion):
       seleccionados.append(self.girar_ruleta())
     return seleccionados
     
-  def armar_ruleta(self, poblacion: Poblacion):
+  def armar_ruleta(self, poblacion: Poblacion) -> None:
     self.ruleta = []
     acumulado = 0.0
     
     for individuo in poblacion.individuos:
-      acumulado += individuo.fitness
+      if individuo.fitness is not None:
+        acumulado += individuo.fitness
       self.ruleta.append((acumulado,individuo))
     
   def girar_ruleta(self) -> Individuo:
@@ -39,8 +41,9 @@ class Ruleta(Seleccion):
     return min(index, len(acumulados) - 1)
   
 class Torneo(Seleccion):
+  k: int | float
 
-  def __init__(self, k):
+  def __init__(self, k: int | float) -> None:
     self.k = k
 
   def seleccionar(self, poblacion: Poblacion) -> list[Individuo]:
@@ -57,7 +60,7 @@ class Torneo(Seleccion):
 
   def realizar_torneo(self, poblacion: Poblacion, k_real: int) -> Individuo:
     competidores = self.tomar_competidores(poblacion.individuos, k_real)
-    return max(competidores, key=lambda ind: ind.fitness)
+    return max(competidores, key=lambda ind: ind.fitness if ind.fitness is not None else -1.0)
 
   def tomar_competidores(self, poblacion: list[Individuo], k_real: int) -> list[Individuo]:
     competidores = []
@@ -67,8 +70,10 @@ class Torneo(Seleccion):
     return competidores
 
 class Elitismo(Seleccion):
+  k: int | float
+  metodo: Seleccion
 
-  def __init__(self, k, metodo: Seleccion):
+  def __init__(self, k: int | float, metodo: Seleccion) -> None:
     self.k = k
     self.metodo = metodo
     
@@ -79,7 +84,7 @@ class Elitismo(Seleccion):
     else:
       k_real = int(self.k)
 
-    elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness, reverse=True)[:k_real]
+    elite = sorted(poblacion.individuos, key=lambda ind: ind.fitness if ind.fitness is not None else -1.0, reverse=True)[:k_real]
 
     resto = [individuo for individuo in poblacion.individuos if individuo not in elite]
 
