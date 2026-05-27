@@ -5,10 +5,12 @@ from typing import Optional, Any
 from individuo import Individuo
 
 class Logger:
+    """Registra y almacena el historial evolutivo de la población"""
     historial: list[tuple[float, float, float, float, Individuo]]
     df_historial: pd.DataFrame
 
     def __init__(self) -> None:
+        """Inicializa las estructuras para almacenar las métricas de evolución"""
         self.historial = []
         self.df_historial = pd.DataFrame(columns=[
             'Ciclo', 'Minimo', 'Maximo', 'Promedio', 'Desviacion', 
@@ -16,6 +18,7 @@ class Logger:
         ])
     
     def agregar_datos(self, minimo: float, maximo: float, promedio: float, desviacion: float, mejor_individuo: Individuo) -> None:
+        """Agrega un registro con las estadísticas de la generación actual"""
         self.historial.append((minimo, maximo, promedio, desviacion, mejor_individuo))
         genes_str = "".join(str(g) for g in mejor_individuo.genes)
         nueva_fila = pd.DataFrame([{
@@ -54,7 +57,7 @@ class Logger:
         plot.export_grafico_convergencia(self.df_historial, filename=ruta_convergencia)
 
     def export_metadata(self, directorio_salida: str, nombre_base: str, tiempo_ejecucion: float, aptitud_maxima: float) -> None:
-        """Exporta metadata con información de tiempo, aptitud máxima y desviación estándar promedio"""
+        """Exporta metadatos de tiempo, aptitud máxima y desviación estándar promedio"""
         
         os.makedirs(directorio_salida, exist_ok=True)
         
@@ -70,14 +73,17 @@ class Logger:
             f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
 
 class Plot_Writer:
+    """Genera representaciones gráficas de las métricas de evolución"""
     fig: Optional[Any]
     ax: Optional[Any]
 
     def __init__(self) -> None:
+        """Inicializa el contenedor de la figura y los ejes de matplotlib"""
         self.fig = None
         self.ax = None
 
     def preparar_grafico(self, titulo: str = "", xlabel: str = "", ylabel: str = "", figsize: tuple[int, int] = (8,5)) -> None:
+        """Inicializa las propiedades del lienzo y ejes para el gráfico"""
         self.fig, self.ax = plt.subplots(figsize=figsize)
 
         self.ax.set_title(titulo)
@@ -86,6 +92,7 @@ class Plot_Writer:
         self.ax.grid(True)
 
     def export_grafico(self, df: pd.DataFrame, x_col: str, y_cols: list[str], filename: str = "grafico.png") -> None:
+        """Guarda un gráfico con la evolución de múltiples columnas indicadas"""
         if self.ax is None or self.fig is None:
             raise Exception("Primero llamá a preparar_grafico()")
 
@@ -130,8 +137,9 @@ class Plot_Writer:
 
         
 class Table_Writer:
+    """Exporta dataframes tabulares a formatos legibles como CSV y Markdown"""
     def __init__(self) -> None:
-        pass
+        """Inicializa el escritor de tablas"""
 
     def exportar_tabla(self, df: pd.DataFrame, filepath_csv: str, filepath_md: str) -> None:
         """Exporta la tabla a CSV y genera un reporte Markdown"""

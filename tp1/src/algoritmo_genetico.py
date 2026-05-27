@@ -7,6 +7,7 @@ from time import perf_counter
 from logger import Logger
 
 class Algoritmo_Genetico:
+    """Orquesta la ejecución del algoritmo genético aplicando operadores y selección"""
     poblacion: Poblacion
     operadores: Operadores
     seleccion: Seleccion
@@ -17,6 +18,7 @@ class Algoritmo_Genetico:
     logger: Logger
   
     def __init__(self, poblacion: Poblacion, operadores: Operadores, metodo: Seleccion, ciclos: int, cantidad_elite: int | float = 0) -> None:
+      """Inicializa los parámetros, población, operadores y logger del algoritmo"""
       self.poblacion = poblacion
       self.operadores = operadores
       self.seleccion = metodo
@@ -27,6 +29,7 @@ class Algoritmo_Genetico:
       self.logger = Logger()
     
     def correr(self, directorio_salida: str | Path = "outputs", nombre_base: str = "corrida") -> None:
+      """Ejecuta el ciclo evolutivo completo y exporta los resultados obtenidos"""
       
       tiempo_inicio = perf_counter()
       
