@@ -12,20 +12,19 @@ if str(SRC_DIR) not in sys.path:
 
 from src.individuo import Individuo
 from src.poblacion import Poblacion
-from src.metodos import Torneo
+from src.metodos import Ruleta
 from src.operadores import Operadores
 from src.algoritmo_genetico import Algoritmo_Genetico
 
 #CONSTANTES GLOBALES
-PROBABILIDAD_CROSSOVER = 0.75
-PROBABILIDAD_MUTACION = 0.05
+PROBABILIDAD_CROSSOVER = 0.5
+PROBABILIDAD_MUTACION = 0.5
 FUNCION_OBJETIVO = lambda x: (x / (2**30 - 1)) ** 2
 TAMAÑO_POBLACION_A = 10
-COMPETIDORES_TORNEO = 0.40
-DIR_SALIDA = BASE_DIR / "outputs" / "torneo"
+DIR_SALIDA = BASE_DIR / "outputs" / "experimento"
 
 #INSTANCIAS GLOBALES
-torneo = Torneo(COMPETIDORES_TORNEO)
+ruleta = Ruleta()
 operadores = Operadores(PROBABILIDAD_CROSSOVER, PROBABILIDAD_MUTACION, FUNCION_OBJETIVO)
 
 #CONSTANTES ETAPA 1
@@ -37,23 +36,21 @@ CICLOS_B = 100
 #CONSTANTES ETAPA 3
 CICLOS_C = 200
 
-
 #INSTANCIAS ETAPA 1
 poblacion_a = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
-algoritmo_genetico_a = Algoritmo_Genetico(poblacion_a, operadores, torneo, CICLOS_A)
+algoritmo_genetico_a = Algoritmo_Genetico(poblacion_a, operadores, ruleta, CICLOS_A)
 
 #INSTANCIAS ETAPA 2
 poblacion_b = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
-algoritmo_genetico_b = Algoritmo_Genetico(poblacion_b, operadores, torneo, CICLOS_B)
+algoritmo_genetico_b = Algoritmo_Genetico(poblacion_b, operadores, ruleta, CICLOS_B)
 
 #INSTANCIAS ETAPA 3
 poblacion_c = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
-algoritmo_genetico_c = Algoritmo_Genetico(poblacion_c, operadores, torneo, CICLOS_C)
+algoritmo_genetico_c = Algoritmo_Genetico(poblacion_c, operadores, ruleta, CICLOS_C)
 
-#EJEMPLO DE USO -> Luego se reemplazará por el logger y las clases que impriman
-algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="torneo_20_ciclos")
-algoritmo_genetico_b.correr(directorio_salida=DIR_SALIDA, nombre_base="torneo_100_ciclos")
-algoritmo_genetico_c.correr(directorio_salida=DIR_SALIDA, nombre_base="torneo_200_ciclos")
+algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_20_ciclos")
+algoritmo_genetico_b.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_100_ciclos")
+algoritmo_genetico_c.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_200_ciclos")
 
 #MUESTRA DE RESULTADOS
 print("ETAPA A")

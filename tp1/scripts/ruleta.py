@@ -48,7 +48,6 @@ algoritmo_genetico_b = Algoritmo_Genetico(poblacion_b, operadores, ruleta, CICLO
 poblacion_c = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
 algoritmo_genetico_c = Algoritmo_Genetico(poblacion_c, operadores, ruleta, CICLOS_C)
 
-#EJEMPLO DE USO -> Luego se reemplazará por el logger y las clases que impriman
 algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_20_ciclos")
 algoritmo_genetico_b.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_100_ciclos")
 algoritmo_genetico_c.correr(directorio_salida=DIR_SALIDA, nombre_base="ruleta_200_ciclos")

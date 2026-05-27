@@ -36,7 +36,6 @@ CICLOS = 100
 poblacion_a = Poblacion(TAMAÑO_POBLACION_A, FUNCION_OBJETIVO)
 algoritmo_genetico_a = Algoritmo_Genetico(poblacion_a, operadores, elitismo, CICLOS, TAMAÑO_ELITE)
 
-#EJEMPLO DE USO -> Luego se reemplazará por el logger y las clases que impriman
 algoritmo_genetico_a.correr(directorio_salida=DIR_SALIDA, nombre_base="elitismo_torneo_100_ciclos")
 
 #MUESTRA DE RESULTADOS

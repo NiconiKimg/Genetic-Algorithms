@@ -9,9 +9,7 @@ class Logger:
     df_historial: pd.DataFrame
 
     def __init__(self) -> None:
-        # Para debug
-        self.historial = [] #Lista de tuplas para minimo, maximo y promedio de cada ciclo
-        # Para mostrar resultados y graficos
+        self.historial = []
         self.df_historial = pd.DataFrame(columns=[
             'Ciclo', 'Minimo', 'Maximo', 'Promedio', 'Desviacion', 
             'Mejor_Cromosoma', 'Mejor_Valor_Obj', 'Mejor_Fitness'
@@ -45,7 +43,7 @@ class Logger:
         plot.preparar_grafico(titulo=f"Evolución - {nombre_base}", xlabel="Ciclo", ylabel="Métricas")
 
         ruta_csv = os.path.join(directorio_salida, f"{nombre_base}_stats.csv")
-        ruta_tabla_md = os.path.join(directorio_salida, f"{nombre_base}_tabla_elegante.md")
+        ruta_tabla_md = os.path.join(directorio_salida, f"{nombre_base}_tabla.md")
         ruta_grafico = os.path.join(directorio_salida, f"{nombre_base}_grafico.png")
         ruta_convergencia = os.path.join(directorio_salida, f"{nombre_base}_convergencia.png")
 

@@ -30,31 +30,6 @@ class Algoritmo_Genetico:
       
       tiempo_inicio = perf_counter()
       
-      for _ in range(self.ciclos):
-        
-        self.poblacion.evaluar()
-
-        mejor_ind = self.poblacion.obtener_mejores(1)[0]
-        self.logger.agregar_datos(
-            self.poblacion.minimo if self.poblacion.minimo is not None else 0.0,
-            self.poblacion.maximo if self.poblacion.maximo is not None else 0.0,
-            self.poblacion.promedio if self.poblacion.promedio is not None else 0.0,
-            self.poblacion.desviacion if self.poblacion.desviacion is not None else 0.0,
-            mejor_ind
-        )
-
-        seleccionados = self.seleccion.seleccionar(self.poblacion)
-        
-        n_poblacion = len(self.poblacion.individuos)
-        if isinstance(self.cantidad_elite, float) and 0.0 < self.cantidad_elite <= 1.0:
-            elite_real = max(1, round(self.cantidad_elite * n_poblacion))
-        else:
-            elite_real = int(self.cantidad_elite)
-            
-        nueva_poblacion = self.operadores.aplicar(seleccionados, elite_real)
-        
-        self.poblacion.pasar_generacion(nueva_poblacion)
-
       self.poblacion.evaluar()
       mejor_ind = self.poblacion.obtener_mejores(1)[0]
       self.logger.agregar_datos(
@@ -64,7 +39,28 @@ class Algoritmo_Genetico:
           self.poblacion.desviacion if self.poblacion.desviacion is not None else 0.0,
           mejor_ind
       )
-
+      
+      for _ in range(self.ciclos - 1):
+        seleccionados = self.seleccion.seleccionar(self.poblacion)
+        
+        n_poblacion = len(self.poblacion.individuos)
+        if isinstance(self.cantidad_elite, float) and 0.0 < self.cantidad_elite <= 1.0:
+            elite_real = max(1, round(self.cantidad_elite * n_poblacion))
+        else:
+            elite_real = int(self.cantidad_elite)
+            
+        nueva_poblacion = self.operadores.aplicar(seleccionados, elite_real)
+        self.poblacion.pasar_generacion(nueva_poblacion)
+        self.poblacion.evaluar()
+        
+        mejor_ind = self.poblacion.obtener_mejores(1)[0]
+        self.logger.agregar_datos(
+            self.poblacion.minimo if self.poblacion.minimo is not None else 0.0,
+            self.poblacion.maximo if self.poblacion.maximo is not None else 0.0,
+            self.poblacion.promedio if self.poblacion.promedio is not None else 0.0,
+            self.poblacion.desviacion if self.poblacion.desviacion is not None else 0.0,
+            mejor_ind
+        )
        
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
