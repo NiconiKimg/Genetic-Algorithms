@@ -68,5 +68,5 @@ class Algoritmo_Genetico:
       tiempo_fin = perf_counter()
       self.tiempo_ejecucion = tiempo_fin - tiempo_inicio
     
-      self.logger.export_datos(str(directorio_salida), nombre_base)
+      self.logger.export_datos(str(directorio_salida), nombre_base, self.poblacion)
       self.logger.export_metadata(str(directorio_salida), nombre_base, self.tiempo_ejecucion, self.poblacion.maximo if self.poblacion.maximo is not None else 0.0)
