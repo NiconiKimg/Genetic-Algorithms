@@ -14,7 +14,7 @@ class Logger:
         self.historial = []
         self.df_historial = pd.DataFrame(columns=[
             'Ciclo', 'Minimo', 'Maximo', 'Promedio', 'Desviacion', 
-            'Mejor_Cromosoma', 'Mejor_Valor_Obj', 'Mejor_Fitness'
+            'Mejor_Cromosoma', 'Mejor_Fitness'
         ])
     
     def agregar_datos(self, minimo: float, maximo: float, promedio: float, desviacion: float, mejor_individuo: Individuo) -> None:
@@ -28,7 +28,6 @@ class Logger:
             'Promedio': promedio, 
             'Desviacion': desviacion,
             'Mejor_Cromosoma': genes_str,
-            'Mejor_Valor_Obj': mejor_individuo.valor_funcion_objetivo,
             'Mejor_Fitness': mejor_individuo.fitness
         }])
     
@@ -296,7 +295,7 @@ class Table_Writer:
 
         df_formatted = df.copy()
         
-        float_cols = ['Minimo', 'Maximo', 'Promedio', 'Desviacion', 'Mejor_Valor_Obj', 'Mejor_Fitness']
+        float_cols = ['Minimo', 'Maximo', 'Promedio', 'Desviacion', 'Mejor_Fitness']
         for col in float_cols:
             if col in df_formatted.columns:
                 df_formatted[col] = df_formatted[col].map(lambda x: f"{x:.8f}" if isinstance(x, (int, float)) else x)
