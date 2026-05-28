@@ -71,19 +71,25 @@ class Logger:
         # Calcular desviación estándar promedio
         desviacion_promedio = float(self.df_historial['Desviacion'].mean())
         
-        # Identificar el ciclo en que se alcanzó por primera vez la aptitud máxima global
-        ciclo_max_aptitud = self.df_historial.loc[self.df_historial['Maximo'].idxmax(), 'Ciclo']
+        # Identificar el ciclo en que se alcanzó por primera vez el máximo valor objetivo global
+        ciclo_max_valor_obj = self.df_historial.loc[self.df_historial['Maximo'].idxmax(), 'Ciclo']
         
         # Calcular el máximo global obtenido entre todos los ciclos y el último máximo
         maxima_global = float(self.df_historial['Maximo'].max())
         ultimo_maximo = float(self.df_historial['Maximo'].iloc[-1])
+
+        # Mejor fitness alcanzado y ciclo en que se alcanzó
+        mejor_fitness_global = float(self.df_historial['Mejor_Fitness'].max())
+        ciclo_mejor_fitness = self.df_historial.loc[self.df_historial['Mejor_Fitness'].idxmax(), 'Ciclo']
         
         with open(ruta_metadata, 'w') as f:
             f.write(f"Ejecución: {nombre_base}\n")
             f.write(f"Tiempo de Computo: {tiempo_ejecucion:.6f} segundos\n")
-            f.write(f"Máxima Global: {maxima_global:.10f}\n")
-            f.write(f"Último Máximo: {ultimo_maximo:.10f}\n")
-            f.write(f"Generación de Aptitud Máxima: {ciclo_max_aptitud}\n")
+            f.write(f"Máximo Valor Objetivo Global: {maxima_global:.10f}\n")
+            f.write(f"Último Máximo Valor Objetivo: {ultimo_maximo:.10f}\n")
+            f.write(f"Generación de Máximo Valor Objetivo: {ciclo_max_valor_obj}\n")
+            f.write(f"Mejor Fitness Global: {mejor_fitness_global:.10f}\n")
+            f.write(f"Generación de Mejor Fitness: {ciclo_mejor_fitness}\n")
             f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
 
 class Plot_Writer:
