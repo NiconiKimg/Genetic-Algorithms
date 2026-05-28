@@ -72,10 +72,14 @@ class Logger:
         # Calcular desviación estándar promedio
         desviacion_promedio = float(self.df_historial['Desviacion'].mean())
         
+        # Identificar el ciclo en que se alcanzó por primera vez la aptitud máxima global
+        ciclo_max_aptitud = self.df_historial.loc[self.df_historial['Maximo'].idxmax(), 'Ciclo']
+        
         with open(ruta_metadata, 'w') as f:
             f.write(f"Ejecución: {nombre_base}\n")
             f.write(f"Tiempo de Computo: {tiempo_ejecucion:.6f} segundos\n")
             f.write(f"Aptitud Máxima: {aptitud_maxima:.10f}\n")
+            f.write(f"Generación de Aptitud Máxima: {ciclo_max_aptitud}\n")
             f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
 
 class Plot_Writer:
