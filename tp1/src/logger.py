@@ -74,10 +74,15 @@ class Logger:
         # Identificar el ciclo en que se alcanzó por primera vez la aptitud máxima global
         ciclo_max_aptitud = self.df_historial.loc[self.df_historial['Maximo'].idxmax(), 'Ciclo']
         
+        # Calcular el máximo global obtenido entre todos los ciclos y el último máximo
+        maxima_global = float(self.df_historial['Maximo'].max())
+        ultimo_maximo = float(self.df_historial['Maximo'].iloc[-1])
+        
         with open(ruta_metadata, 'w') as f:
             f.write(f"Ejecución: {nombre_base}\n")
             f.write(f"Tiempo de Computo: {tiempo_ejecucion:.6f} segundos\n")
-            f.write(f"Aptitud Máxima: {aptitud_maxima:.10f}\n")
+            f.write(f"Máxima Global: {maxima_global:.10f}\n")
+            f.write(f"Último Máximo: {ultimo_maximo:.10f}\n")
             f.write(f"Generación de Aptitud Máxima: {ciclo_max_aptitud}\n")
             f.write(f"Desviación Estándar Promedio: {desviacion_promedio:.10f}\n")
 
@@ -114,6 +119,13 @@ class Plot_Writer:
 
         for col in y_cols:
             self.ax.plot(x, df[col], label=col, linewidth=2, color=colors.get(col))
+
+        # Encontrar el ciclo donde se alcanzó la Máxima Global
+        id_max = df['Maximo'].idxmax()
+        ciclo_max_aptitud = df.loc[id_max, x_col]
+
+        self.ax.axvline(x=ciclo_max_aptitud, color='#c0392b', linestyle='--', linewidth=1.5, 
+                         label=f'Máx Global (Ciclo {ciclo_max_aptitud})', alpha=0.8)
 
         self.ax.legend(frameon=True, framealpha=0.9)
         self.fig.tight_layout()
