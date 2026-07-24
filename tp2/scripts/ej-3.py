@@ -3,38 +3,27 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 
-from funciones import *
+from funciones import KnapsackProblem, build_weight_items
 
-# 1 Columna: Peso, 2 Columna: Valor en $.
-tabla = [
-        [1800,72],
-        [600,36],
-        [1200,60]
-        ]
+if __name__ == "__main__":
+    weights = [1800, 600, 1200]
+    values = [72, 36, 60]
+    items = build_weight_items(weights, values)
+    problem = KnapsackProblem(items, capacity=3000, capacity_dimension="weight")
 
-peso_maximo = 3000
+    exhaustive_solution = problem.best_exhaustive_solution()
+    greedy_solution = problem.greedy_solution()
 
-op=int(input("Ingrese el metodo de busqueda a usar (1: Fuerza Bruta, 2: Heuristico): "))
-
-
-if op == 1:
-    
-    espacio= generarEspacioCombinaciones(2, len(tabla))
-
-    combinaciones = getValorConjunto(espacio, tabla)
-
-    mejor_combinacion = getMejorCombinacion(combinaciones, peso_maximo)
-
-    print("Mejor combinacion (Fuerza Bruta):", mejor_combinacion)
-
-
-elif op == 2:
-    tabla_proporciones = generarProporciones(tabla)
-    tabla_proporciones = sorted(tabla_proporciones, key=lambda x: x[1], reverse=True)
-
-    print(tabla_proporciones)
-    combinacion = getMejorCombinacionGreedy(tabla, tabla_proporciones, peso_maximo)
-
-    combinacion = getValorConjunto([combinacion], tabla)
-
-    print("Mejor combinacion (Heuristico):", combinacion)
+    print("Ejercicio 3 - Peso")
+    print("Solución exhaustiva:", exhaustive_solution.item_labels())
+    print("Valor exhaustivo:", exhaustive_solution.total_value)
+    print("Peso exhaustivo:", exhaustive_solution.total_weight)
+    print("")
+    print("Solución greedy:", greedy_solution.item_labels())
+    print("Valor greedy:", greedy_solution.total_value)
+    print("Peso greedy:", greedy_solution.total_weight)
+    print("¿Greedy alcanza el óptimo?:", greedy_solution.total_value == exhaustive_solution.total_value)
+    if greedy_solution.total_value == exhaustive_solution.total_value:
+        print("El greedy encontró la solución óptima para este conjunto de datos.")
+    else:
+        print("El greedy no encontró la solución óptima en este caso, por lo tanto es subóptimo.")

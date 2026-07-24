@@ -3,11 +3,11 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent / "src"))
 
-from funciones import *
+from funciones import Item, KnapsackProblem, build_items_from_table, build_weight_items
 
 
 def ejercicio_1():
-    """Ejercicio 1: mochila con combinación de elementos."""
+    """Ejercicio 1: mochila con búsqueda exhaustiva."""
     tabla = [
         [150, 20],
         [325, 40],
@@ -20,18 +20,21 @@ def ejercicio_1():
         [930, 46],
         [353, 28],
     ]
-    volumen_maximo = 4200
+    items = build_items_from_table(tabla)
+    problem = KnapsackProblem(items, capacity=4200, capacity_dimension="volume")
 
-    espacio = generarEspacioCombinaciones(2, 10)
-    espacio_valor = getValorConjunto(espacio, tabla)
-    mejor_combinacion = getMejorCombinacion(espacio_valor, volumen_maximo)
+    all_solutions = problem.all_solutions()
+    best_solution = problem.best_exhaustive_solution()
 
-    print("Ejercicio 1")
-    print(mejor_combinacion)
+    print("Ejercicio 1 - Exhaustivo")
+    print("Total de soluciones generadas:", len(all_solutions))
+    print("Mejor solución:", best_solution)
+    print("Elementos seleccionados:", best_solution.item_labels())
+    print("Resumen: valor máximo =", best_solution.total_value, ", volumen usado =", best_solution.total_volume)
 
 
 def ejercicio_2():
-    """Ejercicio 2: solución greedy para la mochila."""
+    """Ejercicio 2: mochila con algoritmo greedy."""
     tabla = [
         [150, 20],
         [325, 40],
@@ -44,47 +47,37 @@ def ejercicio_2():
         [930, 46],
         [353, 28],
     ]
-    volumen_maximo = 4200
+    items = build_items_from_table(tabla)
+    problem = KnapsackProblem(items, capacity=4200, capacity_dimension="volume")
 
-    tabla_proporciones = generarProporciones(tabla)
-    tabla_proporciones = sorted(tabla_proporciones, key=lambda x: x[1], reverse=True)
+    greedy_solution = problem.greedy_solution()
+    optimal_solution = problem.best_exhaustive_solution()
 
-    combinacion = getMejorCombinacionGreedy(tabla, tabla_proporciones, volumen_maximo)
-    combinacion = getValorConjunto([combinacion], tabla)
-
-    print("Ejercicio 2")
-    print(combinacion)
+    print("Ejercicio 2 - Greedy")
+    print("Solución greedy:", greedy_solution)
+    print("Solución óptima:", optimal_solution)
+    print("Coincide el valor óptimo?:", greedy_solution.total_value == optimal_solution.total_value)
 
 
 def ejercicio_3():
-    """Ejercicio 3: fuerza bruta o heurístico según la opción elegida."""
-    tabla = [
-        [1800, 72],
-        [600, 36],
-        [1200, 60],
-    ]
-    peso_maximo = 3000
+    """Ejercicio 3: mochila con pesos en lugar de volumen."""
+    weights = [1800, 600, 1200]
+    values = [72, 36, 60]
+    items = build_weight_items(weights, values)
+    problem = KnapsackProblem(items, capacity=3000, capacity_dimension="weight")
 
-    op = int(input("Ingrese el método de búsqueda a usar (1: Fuerza Bruta, 2: Heurístico): "))
+    exhaustive_solution = problem.best_exhaustive_solution()
+    greedy_solution = problem.greedy_solution()
 
-    if op == 1:
-        espacio = generarEspacioCombinaciones(2, len(tabla))
-        combinaciones = getValorConjunto(espacio, tabla)
-        mejor_combinacion = getMejorCombinacion(combinaciones, peso_maximo)
-
-        print("Mejor combinación (Fuerza Bruta):", mejor_combinacion)
-
-    elif op == 2:
-        tabla_proporciones = generarProporciones(tabla)
-        tabla_proporciones = sorted(tabla_proporciones, key=lambda x: x[1], reverse=True)
-
-        combinacion = getMejorCombinacionGreedy(tabla, tabla_proporciones, peso_maximo)
-        combinacion = getValorConjunto([combinacion], tabla)
-
-        print("Mejor combinación (Heurístico):", combinacion)
-
+    print("Ejercicio 3 - Peso")
+    print("Solución exhaustiva:", exhaustive_solution)
+    print("Solución greedy:", greedy_solution)
+    print("¿Greedy alcanza el valor óptimo?:", greedy_solution.total_value == exhaustive_solution.total_value)
+    print("Análisis:")
+    if greedy_solution.total_value == exhaustive_solution.total_value:
+        print("  El algoritmo greedy encontró una solución óptima para este conjunto de datos.")
     else:
-        print("Opción inválida")
+        print("  El algoritmo greedy no encontró la solución óptima en este caso.")
 
 
 if __name__ == "__main__":
@@ -94,7 +87,6 @@ if __name__ == "__main__":
     print("3 - Ejercicio 3")
 
     opcion = input("Ingrese el número del ejercicio: ")
-
     if opcion == "1":
         ejercicio_1()
     elif opcion == "2":
