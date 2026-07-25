@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import time
 
 sys.path.append(str(Path(__file__).resolve().parent / "src"))
 
@@ -8,6 +9,7 @@ from funciones import Item, KnapsackProblem, build_items_from_table, build_weigh
 
 def ejercicio_1():
     """Ejercicio 1: mochila con búsqueda exhaustiva."""
+    t0 = time.perf_counter()
     tabla = [
         [150, 20],
         [325, 40],
@@ -31,10 +33,13 @@ def ejercicio_1():
     print("Mejor solución:", best_solution)
     print("Elementos seleccionados:", best_solution.item_labels())
     print("Resumen: valor máximo =", best_solution.total_value, ", volumen usado =", best_solution.total_volume)
+    t1 = time.perf_counter()
+    print(f"Tiempo de ejecución Ejercicio 1: {t1 - t0:.6f} s")
 
 
 def ejercicio_2():
     """Ejercicio 2: mochila con algoritmo greedy."""
+    t0 = time.perf_counter()
     tabla = [
         [150, 20],
         [325, 40],
@@ -57,10 +62,13 @@ def ejercicio_2():
     print("Solución greedy:", greedy_solution)
     print("Solución óptima:", optimal_solution)
     print("Coincide el valor óptimo?:", greedy_solution.total_value == optimal_solution.total_value)
+    t1 = time.perf_counter()
+    print(f"Tiempo de ejecución Ejercicio 2: {t1 - t0:.6f} s")
 
 
 def ejercicio_3():
     """Ejercicio 3: mochila con pesos en lugar de volumen."""
+    t0 = time.perf_counter()
     weights = [1800, 600, 1200]
     values = [72, 36, 60]
     items = build_weight_items(weights, values)
@@ -78,6 +86,8 @@ def ejercicio_3():
         print("  El algoritmo greedy encontró una solución óptima para este conjunto de datos.")
     else:
         print("  El algoritmo greedy no encontró la solución óptima en este caso.")
+    t1 = time.perf_counter()
+    print(f"Tiempo de ejecución Ejercicio 3: {t1 - t0:.6f} s")
 
 
 if __name__ == "__main__":
