@@ -5,7 +5,7 @@ import time
 sys.path.append(str(Path(__file__).resolve().parent / "src"))
 
 from funciones import Item, KnapsackProblem, build_items_from_table, build_weight_items
-from logger import Logger
+import time
 
 
 def ejercicio_1():
@@ -25,25 +25,17 @@ def ejercicio_1():
     items = build_items_from_table(tabla)
     problem = KnapsackProblem(items, capacity=4200, capacity_dimension="volume")
 
-    # log via Logger
-    logger = Logger()
-    logger.start_run(algorithm="exhaustive", n=len(items), capacity=4200, capacity_dimension="volume")
+    t0 = time.perf_counter()
     all_solutions = problem.all_solutions()
     best_solution = problem.best_exhaustive_solution()
-
     print("Ejercicio 1 - Exhaustivo")
     print("Total de soluciones generadas:", len(all_solutions))
     print("Mejor solución:", best_solution)
     print("Elementos seleccionados:", best_solution.item_labels())
     print("Resumen: valor máximo =", best_solution.total_value, ", volumen usado =", best_solution.total_volume)
-    logger.end_run(
-        total_value=best_solution.total_value,
-        total_volume=best_solution.total_volume,
-        total_weight=best_solution.total_weight,
-        items_labels=best_solution.item_labels(),
-        num_subsets=len(all_solutions),
-    )
-    print("Resultados guardados en:", logger.csv_location())
+
+    t1 = time.perf_counter()
+    print(f"Tiempo de ejecución Ejercicio 1: {t1 - t0:.6f} s")
 
 
 def ejercicio_2():
@@ -63,33 +55,19 @@ def ejercicio_2():
     items = build_items_from_table(tabla)
     problem = KnapsackProblem(items, capacity=4200, capacity_dimension="volume")
 
-    logger = Logger()
-    # greedy
-    logger.start_run(algorithm="greedy", n=len(items), capacity=4200, capacity_dimension="volume")
+    t0 = time.perf_counter()
     greedy_solution = problem.greedy_solution()
-    logger.end_run(
-        total_value=greedy_solution.total_value,
-        total_volume=greedy_solution.total_volume,
-        total_weight=greedy_solution.total_weight,
-        items_labels=greedy_solution.item_labels(),
-        num_subsets=None,
-    )
-    # exhaustive (for comparison)
-    logger.start_run(algorithm="exhaustive", n=len(items), capacity=4200, capacity_dimension="volume")
+    t1 = time.perf_counter()
+
+    t2 = time.perf_counter()
     optimal_solution = problem.best_exhaustive_solution()
-    logger.end_run(
-        total_value=optimal_solution.total_value,
-        total_volume=optimal_solution.total_volume,
-        total_weight=optimal_solution.total_weight,
-        items_labels=optimal_solution.item_labels(),
-        num_subsets=len(problem.all_solutions()),
-    )
+    t3 = time.perf_counter()
 
     print("Ejercicio 2 - Greedy")
     print("Solución greedy:", greedy_solution)
     print("Solución óptima:", optimal_solution)
     print("Coincide el valor óptimo?:", greedy_solution.total_value == optimal_solution.total_value)
-    print("Resultados guardados en:", logger.csv_location())
+    print(f"Tiempo greedy: {t1 - t0:.6f} s; Tiempo exhaustivo: {t3 - t2:.6f} s")
 
 
 def ejercicio_3():
@@ -99,27 +77,13 @@ def ejercicio_3():
     items = build_weight_items(weights, values)
     problem = KnapsackProblem(items, capacity=3000, capacity_dimension="weight")
 
-    logger = Logger()
-    # exhaustive
-    logger.start_run(algorithm="exhaustive", n=len(items), capacity=3000, capacity_dimension="weight")
+    t0 = time.perf_counter()
     exhaustive_solution = problem.best_exhaustive_solution()
-    logger.end_run(
-        total_value=exhaustive_solution.total_value,
-        total_volume=exhaustive_solution.total_volume,
-        total_weight=exhaustive_solution.total_weight,
-        items_labels=exhaustive_solution.item_labels(),
-        num_subsets=len(problem.all_solutions()),
-    )
-    # greedy
-    logger.start_run(algorithm="greedy", n=len(items), capacity=3000, capacity_dimension="weight")
+    t1 = time.perf_counter()
+
+    t2 = time.perf_counter()
     greedy_solution = problem.greedy_solution()
-    logger.end_run(
-        total_value=greedy_solution.total_value,
-        total_volume=greedy_solution.total_volume,
-        total_weight=greedy_solution.total_weight,
-        items_labels=greedy_solution.item_labels(),
-        num_subsets=None,
-    )
+    t3 = time.perf_counter()
 
     print("Ejercicio 3 - Peso")
     print("Solución exhaustiva:", exhaustive_solution)
@@ -130,7 +94,7 @@ def ejercicio_3():
         print("  El algoritmo greedy encontró una solución óptima para este conjunto de datos.")
     else:
         print("  El algoritmo greedy no encontró la solución óptima en este caso.")
-    print("Resultados guardados en:", logger.csv_location())
+    print(f"Tiempo exhaustivo: {t1 - t0:.6f} s; Tiempo greedy: {t3 - t2:.6f} s")
 
 
 if __name__ == "__main__":
