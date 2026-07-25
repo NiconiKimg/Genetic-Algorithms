@@ -9,7 +9,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Output and temporary folders
-tp1/outputs/
+*/outputs/
 
 # OS files
 Thumbs.db
