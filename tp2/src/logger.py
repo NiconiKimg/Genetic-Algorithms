@@ -1,112 +1,108 @@
 import csv
-import os
 import time
-import platform
 from pathlib import Path
-from typing import Optional, Dict, Any
-
-try:
-    import psutil
-except Exception:
-    psutil = None
+from typing import Any, Optional
 
 
 class Logger:
-    """Logger simple para registrar métricas de ejecución en CSV.
+    """Registra y exporta las estadísticas de ejecución exclusivamente a un archivo CSV"""
 
-    Campos registrados:
-      algorithm, n, capacity, capacity_dimension, total_value, total_volume,
-      total_weight, items_count, items_labels, time_s, num_subsets, memory_peak_mb, variant
-    """
+    campos: list[str]
+    registros: list[dict[str, Any]]
 
-    DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "outputs" / "results.csv"
-
-    def __init__(self, csv_path: Optional[str] = None):
-        self.csv_path = Path(csv_path) if csv_path else self.DEFAULT_OUTPUT
-        self.csv_path.parent.mkdir(parents=True, exist_ok=True)
-        self._fields = [
-            "algorithm",
-            "n",
-            "capacity",
-            "capacity_dimension",
-            "total_value",
-            "total_volume",
-            "total_weight",
-            "items_count",
-            "items_labels",
-            "time_s",
-            "num_subsets",
-            "memory_peak_mb",
-            "variant",
-            "platform",
+    def __init__(self) -> None:
+        """Inicializa las estructuras para almacenar las métricas de la corrida"""
+        self.campos = [
+            "Algoritmo",
+            "N",
+            "Capacidad",
+            "Dimension",
+            "Valor_Total",
+            "Volumen_Total",
+            "Peso_Total",
+            "Cantidad_Elementos",
+            "Elementos_Seleccionados",
+            "Tiempo_Segundos",
+            "Subconjuntos_Evaluados",
         ]
-        self._current: Dict[str, Any] = {}
+        self.registros = []
+        self._ejecucion_actual: dict[str, Any] = {}
 
-    def _get_rss_mb(self) -> float:
-        if psutil:
-            try:
-                p = psutil.Process()
-                return p.memory_info().rss / 1024 ** 2
-            except Exception:
-                return 0.0
-        return 0.0
-
-    def start_run(self, algorithm: str, n: int, capacity: float, capacity_dimension: str = "volume", variant: Optional[str] = None):
-        self._current = {
-            "algorithm": algorithm,
+    def iniciar_ejecucion(
+        self,
+        algoritmo: str,
+        n: int,
+        capacidad: float,
+        dimension_capacidad: str = "volumen",
+    ) -> None:
+        """Registra el inicio de una corrida midiendo el tiempo inicial"""
+        self._ejecucion_actual = {
+            "algoritmo": algoritmo,
             "n": n,
-            "capacity": capacity,
-            "capacity_dimension": capacity_dimension,
-            "variant": variant or "",
-            "start_time": time.perf_counter(),
-            "start_mem": self._get_rss_mb(),
+            "capacidad": capacidad,
+            "dimension_capacidad": dimension_capacidad,
+            "tiempo_inicio": time.perf_counter(),
         }
 
-    def end_run(self, total_value: float, total_volume: float, total_weight: float, items_labels: str, num_subsets: Optional[int] = None):
-        if not self._current:
-            raise RuntimeError("start_run must be called before end_run")
+    def finalizar_ejecucion(
+        self,
+        valor_total: float,
+        volumen_total: float,
+        peso_total: float,
+        etiquetas_elementos: str,
+        subconjuntos_evaluados: Optional[int] = None,
+    ) -> float:
+        """Calcula el tiempo transcurrido y almacena el registro en memoria"""
+        if not self._ejecucion_actual:
+            raise RuntimeError("Debe llamarse a iniciar_ejecucion antes de finalizar_ejecucion")
 
-        end_time = time.perf_counter()
-        end_mem = self._get_rss_mb()
-        elapsed = end_time - self._current.get("start_time", end_time)
-        mem_peak = max(self._current.get("start_mem", 0.0), end_mem)
+        tiempo_fin = time.perf_counter()
+        elapsed = tiempo_fin - self._ejecucion_actual.get("tiempo_inicio", tiempo_fin)
 
-        row = {
-            "algorithm": self._current.get("algorithm", ""),
-            "n": self._current.get("n", 0),
-            "capacity": self._current.get("capacity", 0.0),
-            "capacity_dimension": self._current.get("capacity_dimension", "volume"),
-            "total_value": total_value,
-            "total_volume": total_volume,
-            "total_weight": total_weight,
-            "items_count": len(items_labels.split(",")) if items_labels else 0,
-            "items_labels": items_labels,
-            "time_s": elapsed,
-            "num_subsets": num_subsets if num_subsets is not None else "",
-            "memory_peak_mb": round(mem_peak, 4),
-            "variant": self._current.get("variant", ""),
-            "platform": platform.platform(),
+        cantidad = (
+            len(etiquetas_elementos.split(","))
+            if etiquetas_elementos and etiquetas_elementos != "ninguno"
+            else 0
+        )
+
+        registro = {
+            "Algoritmo": self._ejecucion_actual.get("algoritmo", ""),
+            "N": self._ejecucion_actual.get("n", 0),
+            "Capacidad": self._ejecucion_actual.get("capacidad", 0.0),
+            "Dimension": self._ejecucion_actual.get("dimension_capacidad", "volumen"),
+            "Valor_Total": valor_total,
+            "Volumen_Total": volumen_total,
+            "Peso_Total": peso_total,
+            "Cantidad_Elementos": cantidad,
+            "Elementos_Seleccionados": etiquetas_elementos,
+            "Tiempo_Segundos": round(elapsed, 6),
+            "Subconjuntos_Evaluados": subconjuntos_evaluados if subconjuntos_evaluados is not None else "-",
         }
 
-        # Append to CSV
-        write_header = not self.csv_path.exists() or self.csv_path.stat().st_size == 0
-        with open(self.csv_path, "a", newline='', encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=self._fields)
-            if write_header:
-                writer.writeheader()
-            # ensure all fields exist
-            out_row = {k: row.get(k, "") for k in self._fields}
-            writer.writerow(out_row)
+        self.registros.append(registro)
+        self._ejecucion_actual = {}
+        return elapsed
 
-        # clear current
-        self._current = {}
+    def exportar_tabla(
+        self,
+        directorio_salida: str | Path,
+        nombre_base: str,
+    ) -> str:
+        """Exporta las estadísticas acumuladas a un único archivo CSV"""
+        directorio = Path(directorio_salida)
+        directorio.mkdir(parents=True, exist_ok=True)
 
-    def csv_location(self) -> str:
-        return str(self.csv_path)
+        ruta_csv = directorio / f"{nombre_base}.csv"
 
-    def clear(self):
-        try:
-            if self.csv_path.exists():
-                self.csv_path.unlink()
-        except Exception:
-            pass
+        with open(ruta_csv, "w", newline="", encoding="utf-8") as f:
+            escritor = csv.DictWriter(f, fieldnames=self.campos)
+            escritor.writeheader()
+            for reg in self.registros:
+                escritor.writerow(reg)
+
+        return str(ruta_csv)
+
+    def limpiar(self) -> None:
+        """Limpia el historial de registros en memoria"""
+        self.registros = []
+        self._ejecucion_actual = {}
