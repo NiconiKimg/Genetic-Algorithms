@@ -10,16 +10,18 @@ def generar_todas_las_graficas(ruta_csv_especifica: str | None = None) -> None:
     """Lee un archivo de datos o convierte la tabla para generar los gráficos PNG en outputs/plots/"""
     dir_outputs = Path(__file__).resolve().parent.parent / "outputs"
 
-    # Si se requiere gráfico desde datos, busca archivos .md o .csv
-    ruta_csv = Path(ruta_csv_especifica) if ruta_csv_especifica else dir_outputs / "benchmarks_stats.csv"
+    # Utiliza el CSV generado por benchmarks.py
+    ruta_csv = (
+        Path(ruta_csv_especifica)
+        if ruta_csv_especifica
+        else dir_outputs / "benchmarks.csv"
+    )
 
     if not ruta_csv.exists():
-        candidatos = list(dir_outputs.glob("*.csv"))
-        if candidatos:
-            ruta_csv = candidatos[0]
-
-    if not ruta_csv.exists():
-        print(f"Nota: Para generar gráficos PNG con seaborn/matplotlib, asegúrese de contar con datos de corridas.")
+        print(
+            "Nota: no se encontró outputs/benchmarks.csv. "
+            "Ejecute primero scripts/benchmarks.py."
+        )
         return
 
     print(f"Generando gráficos a partir de: {ruta_csv}")
