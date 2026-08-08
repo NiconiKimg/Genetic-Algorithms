@@ -89,10 +89,10 @@ def ejecutar_benchmarks() -> str:
     ejecutar_benchmarks_e1_e2(logger, valores_n=valores_n, repeticiones=5, mezclar=False, semilla_inicial=0)
 
     dir_salida = Path(__file__).resolve().parent.parent / "outputs"
-    ruta_md = logger.exportar_tabla(dir_salida, "benchmarks")
+    ruta_csv = logger.exportar_tabla(dir_salida, "benchmarks")
 
-    print(f"Benchmark finalizado con éxito.\n  - Tabla MD: {ruta_md}\n")
-    return ruta_md
+    print(f"Benchmark finalizado con éxito.\n  - Tabla CSV: {ruta_csv}\n")
+    return ruta_csv
 
 
 if __name__ == "__main__":

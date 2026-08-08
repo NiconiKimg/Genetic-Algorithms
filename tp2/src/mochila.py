@@ -58,9 +58,13 @@ class Mochila:
 
 def evaluar_solucion(elementos: list[Elemento], mochila: Optional[Mochila] = None) -> SolucionMochila:
     """Evalúa la suma de volumen, peso, valor y factibilidad de una lista de elementos"""
-    volumen_total = sum(elem.volumen for elem in elementos)
-    peso_total = sum(elem.peso for elem in elementos)
-    valor_total = sum(elem.valor for elem in elementos)
+    volumen_total = 0.0
+    peso_total = 0.0
+    valor_total = 0.0
+    for elem in elementos:
+        volumen_total += elem.volumen
+        peso_total += elem.peso
+        valor_total += elem.valor
 
     factible = True
     if mochila is not None:

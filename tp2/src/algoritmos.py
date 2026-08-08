@@ -18,7 +18,11 @@ def resolver_exhaustivo(
         tabla_subconjuntos.append(solucion)
 
     # 2. Clasificar los subconjuntos por valor de mayor a menor en memoria
-    tabla_subconjuntos.sort(key=lambda s: s.valor_total, reverse=True)
+    total_sub = len(tabla_subconjuntos)
+    for i in range(total_sub - 1):
+        for j in range(total_sub - 1 - i):
+            if tabla_subconjuntos[j].valor_total < tabla_subconjuntos[j + 1].valor_total:
+                tabla_subconjuntos[j], tabla_subconjuntos[j + 1] = tabla_subconjuntos[j + 1], tabla_subconjuntos[j]
 
     # 3. Seleccionar la primera solución de la tabla ordenada que sea factible
     mejor_solucion = SolucionMochila([], 0.0, 0.0, 0.0, es_factible=True)
@@ -37,11 +41,12 @@ def resolver_greedy(
 ) -> SolucionMochila:
     """Selecciona elementos ordenados por densidad de valor decreciente respetando la capacidad"""
     mochila = Mochila(capacidad_maxima=capacidad, dimension_capacidad=dimension)
-    elementos_ordenados = sorted(
-        elementos,
-        key=lambda elem: elem.obtener_ratio(dimension),
-        reverse=True,
-    )
+    elementos_ordenados = list(elementos)
+    n_elem = len(elementos_ordenados)
+    for i in range(n_elem - 1):
+        for j in range(n_elem - 1 - i):
+            if elementos_ordenados[j].obtener_ratio(dimension) < elementos_ordenados[j + 1].obtener_ratio(dimension):
+                elementos_ordenados[j], elementos_ordenados[j + 1] = elementos_ordenados[j + 1], elementos_ordenados[j]
 
     seleccionados: list[Elemento] = []
     capacidad_usada = 0.0

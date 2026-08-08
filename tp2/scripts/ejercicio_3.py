@@ -55,7 +55,7 @@ def ejecutar_ejercicio_3() -> None:
     )
 
     dir_salida = Path(__file__).resolve().parent.parent / "outputs"
-    ruta_md = logger.exportar_tabla(dir_salida, "ejercicio_3")
+    ruta_csv = logger.exportar_tabla(dir_salida, "ejercicio_3")
 
     es_optimo = solucion_greedy.valor_total == solucion_exhaustiva.valor_total
 
@@ -89,7 +89,7 @@ def ejecutar_ejercicio_3() -> None:
         print("    solo 1200grs disponibles y sin poder incluir el Elemento 1 (1800grs, $72 -> ratio 0.04 $/gr).")
         print("    El Óptimo Exhaustivo combina los Elementos 1 y 3 utilizando exactamente los 3000grs para alcanzar $132.")
 
-    print(f"\nTabla de reporte exportada a: {ruta_md}")
+    print(f"\nTabla de reporte exportada a: {ruta_csv}")
     print("==================================================\n")
 
 

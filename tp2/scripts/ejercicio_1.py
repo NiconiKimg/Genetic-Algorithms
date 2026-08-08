@@ -37,7 +37,7 @@ def ejecutar_ejercicio_1() -> None:
     )
 
     dir_salida = Path(__file__).resolve().parent.parent / "outputs"
-    ruta_md = logger.exportar_tabla(dir_salida, "ejercicio_1")
+    ruta_csv = logger.exportar_tabla(dir_salida, "ejercicio_1")
 
     print("==================================================")
     print("EJERCICIO 1 - Búsqueda Exhaustiva (Tabla en Memoria)")
@@ -55,7 +55,7 @@ def ejecutar_ejercicio_1() -> None:
         fact_str = "SÍ" if sol.es_factible else "NO (Excede)"
         print(f"{idx:<5} | ${sol.valor_total:<9.2f} | {sol.volumen_total:<14.2f} | {fact_str:<10} | [{sol.etiquetas_elementos()}]")
 
-    print(f"\nTabla de reporte exportada a: {ruta_md}")
+    print(f"\nTabla de reporte exportada a: {ruta_csv}")
     print("==================================================\n")
 
 
