@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -56,7 +55,7 @@ class Mochila:
     dimension_capacidad: str = "volumen"
 
 
-def evaluar_solucion(elementos: list[Elemento], mochila: Optional[Mochila] = None) -> SolucionMochila:
+def evaluar_solucion(elementos: list[Elemento], mochila: Mochila) -> SolucionMochila:
     """Evalúa la suma de volumen, peso, valor y factibilidad de una lista de elementos"""
     volumen_total = 0.0
     peso_total = 0.0
@@ -66,12 +65,10 @@ def evaluar_solucion(elementos: list[Elemento], mochila: Optional[Mochila] = Non
         peso_total += elem.peso
         valor_total += elem.valor
 
-    factible = True
-    if mochila is not None:
-        if mochila.dimension_capacidad == "peso":
-            factible = peso_total <= mochila.capacidad_maxima
-        else:
-            factible = volumen_total <= mochila.capacidad_maxima
+    if mochila.dimension_capacidad == "peso":
+        factible = peso_total <= mochila.capacidad_maxima
+    else:
+        factible = volumen_total <= mochila.capacidad_maxima
 
     return SolucionMochila(
         elementos=elementos,

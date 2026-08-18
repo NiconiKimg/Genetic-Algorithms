@@ -7,42 +7,15 @@ from src.graficadores import graficar_heatmap_elementos, graficar_tiempo_vs_n, g
 
 
 def generar_todas_las_graficas(ruta_csv_especifica: str | None = None) -> None:
-    """Lee un archivo de datos o convierte la tabla para generar los gráficos PNG en outputs/plots/"""
+    """Genera los tres gráficos PNG desde un CSV de benchmarks en outputs/plots/"""
     dir_outputs = Path(__file__).resolve().parent.parent / "outputs"
-
-    # Utiliza el CSV generado por benchmarks.py
-    ruta_csv = (
-        Path(ruta_csv_especifica)
-        if ruta_csv_especifica
-        else dir_outputs / "benchmarks.csv"
+    ruta_csv = str(
+        Path(ruta_csv_especifica) if ruta_csv_especifica else dir_outputs / "benchmarks.csv"
     )
 
-    if not ruta_csv.exists():
-        print(
-            "Nota: no se encontró outputs/benchmarks.csv. "
-            "Ejecute primero scripts/benchmarks.py."
-        )
-        return
-
-    print(f"Generando gráficos a partir de: {ruta_csv}")
-
-    try:
-        p1 = graficar_tiempo_vs_n(str(ruta_csv))
-        print(f"  [OK] Gráfico de tiempo guardado en: {p1}")
-    except Exception as e:
-        print(f"  [ERR] Fallo al generar gráfico de tiempo: {e}")
-
-    try:
-        p2 = graficar_uso_capacidad(str(ruta_csv))
-        print(f"  [OK] Gráfico de capacidad guardado en: {p2}")
-    except Exception as e:
-        print(f"  [ERR] Fallo al generar gráfico de capacidad: {e}")
-
-    try:
-        p3 = graficar_heatmap_elementos(str(ruta_csv))
-        print(f"  [OK] Heatmap de elementos guardado en: {p3}")
-    except Exception as e:
-        print(f"  [ERR] Fallo al generar heatmap: {e}")
+    graficar_tiempo_vs_n(ruta_csv)
+    graficar_uso_capacidad(ruta_csv)
+    graficar_heatmap_elementos(ruta_csv)
 
 
 if __name__ == "__main__":

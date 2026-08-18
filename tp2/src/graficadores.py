@@ -1,25 +1,12 @@
 from pathlib import Path
-from typing import Optional
 
-try:
-    import pandas as pd
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-except ImportError:
-    pd = None
-    sns = None
-    plt = None
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 
-def _verificar_librerias() -> None:
-    """Verifica la presencia de las librerías pandas, seaborn y matplotlib"""
-    if pd is None or sns is None or plt is None:
-        raise RuntimeError("La generación de gráficos requiere pandas, seaborn y matplotlib.")
-
-
-def graficar_tiempo_vs_n(ruta_csv: str, ruta_salida: Optional[str] = None) -> str:
+def graficar_tiempo_vs_n(ruta_csv: str, ruta_salida: str | None = None) -> str:
     """Genera y guarda el gráfico de tiempo de ejecución en función de n"""
-    _verificar_librerias()
     df = pd.read_csv(ruta_csv)
     df = df[df["N"].notna()]
     df["N"] = df["N"].astype(int)
@@ -43,9 +30,8 @@ def graficar_tiempo_vs_n(ruta_csv: str, ruta_salida: Optional[str] = None) -> st
     return str(archivo_salida)
 
 
-def graficar_uso_capacidad(ruta_csv: str, ruta_salida: Optional[str] = None) -> str:
+def graficar_uso_capacidad(ruta_csv: str, ruta_salida: str | None = None) -> str:
     """Genera y guarda el gráfico comparativo del volumen medio utilizado"""
-    _verificar_librerias()
     df = pd.read_csv(ruta_csv)
     df = df[df["Volumen_Total"].notna()]
     df["N"] = df["N"].astype(int)
@@ -68,9 +54,8 @@ def graficar_uso_capacidad(ruta_csv: str, ruta_salida: Optional[str] = None) -> 
     return str(archivo_salida)
 
 
-def graficar_heatmap_elementos(ruta_csv: str, ruta_salida: Optional[str] = None) -> str:
+def graficar_heatmap_elementos(ruta_csv: str, ruta_salida: str | None = None) -> str:
     """Genera y guarda el mapa de calor con la frecuencia de selección de cada elemento"""
-    _verificar_librerias()
     df = pd.read_csv(ruta_csv)
 
     filas = []

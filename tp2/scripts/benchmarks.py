@@ -1,4 +1,3 @@
-import random
 import sys
 from pathlib import Path
 
@@ -14,8 +13,6 @@ def ejecutar_benchmarks_e1_e2(
     logger: Logger,
     valores_n: list[int],
     repeticiones: int,
-    mezclar: bool,
-    semilla_inicial: int,
 ) -> None:
     """Ejecuta corridas comparativas variando el tamaño del problema n y repeticiones"""
     tabla_base = TABLA_VOLUMEN_EJ1_EJ2
@@ -26,15 +23,8 @@ def ejecutar_benchmarks_e1_e2(
             continue
         n_usar = min(n, max_elementos)
 
-        for i in range(repeticiones):
-            semilla = semilla_inicial + i
-            filas_tabla = [fila[:] for fila in tabla_base[:n_usar]]
-
-            if mezclar:
-                rnd = random.Random(semilla)
-                rnd.shuffle(filas_tabla)
-
-            elementos = crear_elementos_desde_tabla(filas_tabla)
+        for _ in range(repeticiones):
+            elementos = crear_elementos_desde_tabla(tabla_base[:n_usar])
 
             # 1. Búsqueda Exhaustiva
             logger.iniciar_ejecucion(
@@ -79,20 +69,10 @@ def ejecutar_benchmarks_e1_e2(
 
 def ejecutar_benchmarks() -> str:
     """Ejecuta el conjunto de benchmarks automáticos y exporta la tabla de métricas"""
-    print("==================================================")
-    print("  EJECUTOR DE BENCHMARKS — TP2 MOCHILA")
-    print("==================================================")
     logger = Logger()
-
-    valores_n = [4, 6, 8, 10]
-    print(f"Ejecutando sweep automático para n = {valores_n} (k=5 repeticiones)...")
-    ejecutar_benchmarks_e1_e2(logger, valores_n=valores_n, repeticiones=5, mezclar=False, semilla_inicial=0)
-
+    ejecutar_benchmarks_e1_e2(logger, valores_n=[4, 6, 8, 10], repeticiones=5)
     dir_salida = Path(__file__).resolve().parent.parent / "outputs"
-    ruta_csv = logger.exportar_tabla(dir_salida, "benchmarks")
-
-    print(f"Benchmark finalizado con éxito.\n  - Tabla CSV: {ruta_csv}\n")
-    return ruta_csv
+    return logger.exportar_tabla(dir_salida, "benchmarks")
 
 
 if __name__ == "__main__":
