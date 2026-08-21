@@ -71,6 +71,20 @@ Atributos:
 
 Es util para Branch and Bound y puede servir como base para otras estrategias de exploracion.
 
+#### `EvaluadorRutas`
+
+Centraliza el calculo de distancias. Permite evaluar una ruta cerrada o un cromosoma genetico. El cromosoma no contiene la ciudad inicial: para el problema completo contiene las ciudades `1` a `23`, mientras que la ciudad `0` se agrega como origen y retorno al construir la ruta.
+
+Metodos principales:
+
+- `distancia_recorrido(recorrido)`: calcula una ruta cerrada valida.
+- `distancia_cromosoma(cromosoma, ciudad_inicial)`: evalua una permutacion genetica.
+- `crear_ruta(cromosoma, ciudad_inicial)`: convierte un cromosoma en `RutaTSP`.
+
+#### `IndividuoTSP`
+
+Representa un cromosoma como una tupla inmutable y opcionalmente guarda su distancia total. `evaluar()` devuelve el individuo evaluado, `ruta()` lo convierte en una ruta cerrada y `fitness` devuelve `1 / distancia_total`.
+
 ### `branch_bound.py`
 
 Contiene el Branch and Bound secuencial.
@@ -145,6 +159,58 @@ Para un algoritmo genetico se recomienda utilizar:
 - `ProblemaTSP` como contexto compartido por la poblacion.
 
 `NodoBusqueda` pertenece especificamente a las estrategias de exploracion de arbol y no es necesario para representar individuos de un algoritmo genetico.
+
+### `configuracion_genetica.py`
+
+Contiene `ConfiguracionGenetica`, una clase con los parametros del algoritmo genetico. Sus valores por defecto siguen las recomendaciones del enunciado:
+
+- `cantidad_cromosomas = 50`.
+- `cantidad_ciclos = 200`.
+- `frecuencia_crossover = 0.90`.
+- `frecuencia_mutacion = 0.10`.
+- `tamano_torneo = 3`.
+
+Las frecuencias y la semilla aleatoria pueden modificarse para comparar experimentos.
+
+### `poblacion_tsp.py`
+
+Contiene `PoblacionTSP`, responsable de generar, evaluar y administrar individuos.
+
+- `aleatoria(ciudades, cantidad, generador)`: crea la poblacion inicial.
+- `evaluar(evaluador, ciudad_inicial)`: calcula la distancia de cada individuo.
+- `mejor()`: devuelve el individuo con menor distancia.
+- `mejor_ruta(evaluador, ciudad_inicial)`: devuelve el mejor individuo como `RutaTSP`.
+- `conservar_elite(individuo)`: conserva una solucion elite reemplazando al peor individuo.
+
+### `operadores_geneticos.py`
+
+Contiene operadores que conservan la validez de las permutaciones.
+
+#### `SeleccionTorneo`
+
+Elige aleatoriamente varios candidatos y devuelve el de menor distancia. Es una estrategia de seleccion reutilizable para formar parejas de padres.
+
+#### `CrossoverCiclico`
+
+Implementa el crossover ciclico (Cycle Crossover, CX) recomendado por el enunciado. Recibe dos `IndividuoTSP` y devuelve dos hijos que contienen exactamente los mismos genes, sin repetidos ni faltantes.
+
+#### `MutacionIntercambio`
+
+Intercambia dos posiciones del cromosoma. Al operar sobre una permutacion, mantiene siempre una ruta valida.
+
+### `heuristica_vecino.py`
+
+Contiene `VecinoMasCercano`, que implementa la heuristica solicitada: desde la ciudad actual visita la ciudad no visitada mas cercana y, despues de visitar todas, regresa a la ciudad inicial.
+
+```python
+from heuristica_vecino import VecinoMasCercano
+
+heuristica = VecinoMasCercano(problema)
+ruta = heuristica.resolver(ciudad_inicial=0)
+mejor_de_todos = heuristica.resolver_todos_los_inicios()
+```
+
+`resolver()` corresponde al punto 2.a, porque permite elegir la ciudad de partida. `resolver_todos_los_inicios()` resulta util para el punto 2.b, porque ejecuta la heuristica desde cada capital y devuelve la mejor ruta heuristica encontrada.
 
 ## Scripts disponibles
 
