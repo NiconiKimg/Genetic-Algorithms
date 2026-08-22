@@ -15,7 +15,9 @@ if str(RAIZ_TP3 / "src") not in sys.path:
 
 from branch_bound import BranchBound
 from branch_bound_paralelo import BranchBoundParalelo
+from coordenadas_capitales import COORDENADAS_CAPITALES
 from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from heuristica_vecino import VecinoMasCercano
 from modelos_tsp import ProblemaTSP, RutaTSP
 
 
@@ -29,6 +31,15 @@ class ResultadoGUI:
     segundos: float
     nodos_explorados: int
     nodos_podados: int
+
+
+@dataclass(frozen=True)
+class ResultadoHeuristicoGUI:
+    """Datos de la ruta heuristica para la pestaña 2.a."""
+
+    ciudad_inicial: int
+    ruta: RutaTSP
+    segundos: float
 
 
 def crear_problema(cantidad_ciudades: int) -> ProblemaTSP:
@@ -69,6 +80,18 @@ def ejecutar_algoritmo(
     )
 
 
+def ejecutar_heuristica(ciudad_inicial: int) -> ResultadoHeuristicoGUI:
+    """Ejecuta vecino mas cercano desde la capital elegida."""
+    problema = crear_problema(len(CAPITALES))
+    inicio = perf_counter()
+    ruta = VecinoMasCercano(problema).resolver(ciudad_inicial)
+    return ResultadoHeuristicoGUI(
+        ciudad_inicial=ciudad_inicial,
+        ruta=ruta,
+        segundos=perf_counter() - inicio,
+    )
+
+
 class AplicacionTSP:
     """Ventana principal y navegacion de la aplicacion del TP3."""
 
@@ -86,6 +109,7 @@ class AplicacionTSP:
         self.cantidad_ciudades = tk.IntVar(value=len(CAPITALES))
         self.algoritmo = tk.StringVar(value="Branch and Bound secuencial")
         self.cantidad_procesos = tk.IntVar(value=2)
+        self.ciudad_inicial_heuristica = tk.StringVar(value=CAPITALES[0])
         self.estado = tk.StringVar(value="Listo para ejecutar el ejercicio 1.")
 
     def _crear_estilos(self) -> None:
@@ -119,10 +143,13 @@ class AplicacionTSP:
         self.pestanas.pack(fill="both", expand=True)
         self.pestana_inicio = ttk.Frame(self.pestanas, padding=24)
         self.pestana_ejercicio_1 = ttk.Frame(self.pestanas, padding=20)
+        self.pestana_ejercicio_2a = ttk.Frame(self.pestanas, padding=20)
         self.pestanas.add(self.pestana_inicio, text="Inicio")
         self.pestanas.add(self.pestana_ejercicio_1, text="Ejercicio 1")
+        self.pestanas.add(self.pestana_ejercicio_2a, text="Ejercicio 2.a")
         self._crear_inicio()
         self._crear_ejercicio_1()
+        self._crear_ejercicio_2a()
 
         ttk.Label(contenedor, textvariable=self.estado).pack(anchor="w", pady=(12, 0))
 
@@ -144,6 +171,11 @@ class AplicacionTSP:
             text="Ejercicio 1 - Branch and Bound",
             command=self.mostrar_ejercicio_1,
         ).pack(ipadx=18, ipady=8)
+        ttk.Button(
+            marco,
+            text="Ejercicio 2.a - Vecino más cercano",
+            command=self.mostrar_ejercicio_2a,
+        ).pack(ipadx=18, ipady=8, pady=(10, 0))
 
     def _crear_ejercicio_1(self) -> None:
         self.pestana_ejercicio_1.columnconfigure(1, weight=1)
@@ -214,6 +246,190 @@ class AplicacionTSP:
 
     def mostrar_ejercicio_1(self) -> None:
         self.pestanas.select(self.pestana_ejercicio_1)
+
+    def mostrar_ejercicio_2a(self) -> None:
+        self.pestanas.select(self.pestana_ejercicio_2a)
+
+    def _crear_ejercicio_2a(self) -> None:
+        self.pestana_ejercicio_2a.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_2a.rowconfigure(3, weight=1)
+
+        ttk.Label(
+            self.pestana_ejercicio_2a,
+            text="Ejercicio 2.a - Vecino más cercano",
+            style="Titulo.TLabel",
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        ttk.Label(
+            self.pestana_ejercicio_2a,
+            text="Desde cada ciudad se visita la capital no visitada más cercana.",
+            style="Subtitulo.TLabel",
+        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 16))
+        ttk.Label(
+            self.pestana_ejercicio_2a,
+            text="Ciudad de partida:",
+        ).grid(row=2, column=0, sticky="w", pady=6)
+        ttk.Combobox(
+            self.pestana_ejercicio_2a,
+            textvariable=self.ciudad_inicial_heuristica,
+            values=CAPITALES,
+            state="readonly",
+            width=38,
+        ).grid(row=2, column=1, sticky="w", padx=(12, 0), pady=6)
+        self.boton_resolver_2a = ttk.Button(
+            self.pestana_ejercicio_2a,
+            text="Resolver heurística",
+            command=self.resolver_ejercicio_2a,
+        )
+        self.boton_resolver_2a.grid(row=2, column=2, padx=(20, 0), pady=6)
+
+        contenido = ttk.Frame(self.pestana_ejercicio_2a)
+        contenido.grid(row=3, column=0, columnspan=3, sticky="nsew", pady=(16, 0))
+        contenido.columnconfigure(0, weight=1)
+        contenido.columnconfigure(1, weight=2)
+        contenido.rowconfigure(0, weight=1)
+        self.salida_2a = tk.Text(contenido, width=36, wrap="word", state="disabled")
+        self.salida_2a.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        self.mapa_2a = tk.Canvas(
+            contenido,
+            background="#f2f5f4",
+            highlightthickness=1,
+            highlightbackground="#b8c8c2",
+        )
+        self.mapa_2a.grid(row=0, column=1, sticky="nsew")
+        self.mapa_2a.bind("<Configure>", self._redibujar_mapa)
+        self._dibujar_mapa_base()
+
+    def resolver_ejercicio_2a(self) -> None:
+        ciudad = self.ciudad_inicial_heuristica.get()
+        if ciudad not in CAPITALES:
+            messagebox.showerror("Datos inválidos", "Seleccione una capital válida.")
+            return
+        self.boton_resolver_2a.configure(state="disabled")
+        self.estado.set("Ejecutando la heurística del vecino más cercano...")
+        self._escribir_salida_2a("Calculando ruta heurística...\n")
+        threading.Thread(
+            target=self._trabajar_2a,
+            args=(CAPITALES.index(ciudad),),
+            daemon=True,
+        ).start()
+        self.root.after(100, self._consultar_resultado_2a)
+
+    def _trabajar_2a(self, ciudad_inicial: int) -> None:
+        try:
+            resultado = ejecutar_heuristica(ciudad_inicial)
+            self.resultados.put(("heuristica", resultado))
+        except Exception as error:
+            self.resultados.put(("error_2a", error))
+
+    def _consultar_resultado_2a(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado_2a)
+            return
+        self.boton_resolver_2a.configure(state="normal")
+        if tipo == "error_2a":
+            self.estado.set("La ejecución heurística terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+        if tipo != "heuristica" or not isinstance(valor, ResultadoHeuristicoGUI):
+            self.resultados.put((tipo, valor))
+            self.root.after(100, self._consultar_resultado_2a)
+            return
+        self.estado.set("Ejecución heurística finalizada.")
+        self._mostrar_resultado_2a(valor)
+
+    def _mostrar_resultado_2a(self, resultado: ResultadoHeuristicoGUI) -> None:
+        problema = crear_problema(len(CAPITALES))
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}"
+            for indice, nombre in enumerate(resultado.ruta.nombres(problema))
+        )
+        texto = "\n".join(
+            (
+                "Algoritmo: Vecino más cercano",
+                f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
+                f"Distancia total: {resultado.ruta.distancia_total} km",
+                f"Tiempo de ejecución: {resultado.segundos:.6f} s",
+                "",
+                "Recorrido completo:",
+                nombres,
+            )
+        )
+        self._escribir_salida_2a(texto)
+        self._dibujar_ruta(resultado.ruta, problema)
+
+    def _escribir_salida_2a(self, texto: str) -> None:
+        self.salida_2a.configure(state="normal")
+        self.salida_2a.delete("1.0", tk.END)
+        self.salida_2a.insert(tk.END, texto)
+        self.salida_2a.configure(state="disabled")
+
+    def _dibujar_mapa_base(self) -> None:
+        self.mapa_2a.delete("all")
+        self.mapa_2a.create_text(
+            12,
+            12,
+            anchor="nw",
+            text="Mapa esquemático de la República Argentina",
+            fill="#34443e",
+            font=("Segoe UI", 10, "bold"),
+        )
+
+    def _redibujar_mapa(self, _evento: tk.Event) -> None:
+        if not hasattr(self, "ruta_mapa_2a"):
+            self._dibujar_mapa_base()
+            return
+        self._dibujar_ruta(self.ruta_mapa_2a, crear_problema(len(CAPITALES)))
+
+    def _dibujar_ruta(self, ruta: RutaTSP, problema: ProblemaTSP) -> None:
+        self.ruta_mapa_2a = ruta
+        self.mapa_2a.delete("all")
+        ancho = max(self.mapa_2a.winfo_width(), 420)
+        alto = max(self.mapa_2a.winfo_height(), 360)
+        longitudes = [COORDENADAS_CAPITALES[nombre][0] for nombre in CAPITALES]
+        latitudes = [COORDENADAS_CAPITALES[nombre][1] for nombre in CAPITALES]
+        min_lon, max_lon = min(longitudes), max(longitudes)
+        min_lat, max_lat = min(latitudes), max(latitudes)
+
+        def punto(indice: int) -> tuple[float, float]:
+            nombre = problema.nombre_ciudad(indice)
+            longitud, latitud = COORDENADAS_CAPITALES[nombre]
+            x = 30 + (longitud - min_lon) / (max_lon - min_lon) * (ancho - 60)
+            y = 38 + (max_lat - latitud) / (max_lat - min_lat) * (alto - 78)
+            return x, y
+
+        self.mapa_2a.create_text(
+            12,
+            12,
+            anchor="nw",
+            text="Mapa esquemático - recorrido heurístico",
+            fill="#34443e",
+            font=("Segoe UI", 10, "bold"),
+        )
+        puntos = [punto(indice) for indice in ruta.recorrido]
+        for origen, destino in zip(puntos, puntos[1:]):
+            self.mapa_2a.create_line(*origen, *destino, fill="#197c72", width=2)
+        for indice, (x, y) in zip(ruta.recorrido[:-1], puntos[:-1]):
+            inicio = indice == ruta.recorrido[0]
+            color = "#d05a3d" if inicio else "#245b63"
+            radio = 6 if inicio else 4
+            self.mapa_2a.create_oval(
+                x - radio,
+                y - radio,
+                x + radio,
+                y + radio,
+                fill=color,
+                outline="white",
+            )
+            self.mapa_2a.create_text(
+                x + 7,
+                y,
+                anchor="w",
+                text=problema.nombre_ciudad(indice),
+                fill="#28332f",
+                font=("Segoe UI", 7),
+            )
 
     def resolver_ejercicio_1(self) -> None:
         try:
