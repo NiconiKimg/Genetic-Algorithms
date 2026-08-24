@@ -253,45 +253,57 @@ class AplicacionTSP:
         self.pestanas.select(self.pestana_ejercicio_2a)
 
     def _crear_ejercicio_2a(self) -> None:
+        self.pestana_ejercicio_2a.columnconfigure(0, weight=0, minsize=330)
         self.pestana_ejercicio_2a.columnconfigure(1, weight=1)
-        self.pestana_ejercicio_2a.rowconfigure(3, weight=1)
+        self.pestana_ejercicio_2a.rowconfigure(0, weight=1)
+
+        panel_izquierdo = tk.Frame(
+            self.pestana_ejercicio_2a,
+            borderwidth=1,
+            relief="solid",
+            background="#f7f9f8",
+        )
+        panel_izquierdo.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+        panel_izquierdo.grid_columnconfigure(0, weight=1)
+        panel_izquierdo.grid_rowconfigure(5, weight=1)
 
         ttk.Label(
-            self.pestana_ejercicio_2a,
-            text="Ejercicio 2.a - Vecino más cercano",
+            panel_izquierdo,
+            text="Ejercicio 2.a",
             style="Titulo.TLabel",
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(20, 4))
         ttk.Label(
-            self.pestana_ejercicio_2a,
-            text="Desde cada ciudad se visita la capital no visitada más cercana.",
+            panel_izquierdo,
+            text="Vecino más cercano",
             style="Subtitulo.TLabel",
-        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 16))
+        ).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 18))
         ttk.Label(
-            self.pestana_ejercicio_2a,
+            panel_izquierdo,
             text="Ciudad de partida:",
-        ).grid(row=2, column=0, sticky="w", pady=6)
+        ).grid(row=2, column=0, sticky="w", padx=18, pady=(0, 6))
         ttk.Combobox(
-            self.pestana_ejercicio_2a,
+            panel_izquierdo,
             textvariable=self.ciudad_inicial_heuristica,
             values=CAPITALES,
             state="readonly",
-            width=38,
-        ).grid(row=2, column=1, sticky="w", padx=(12, 0), pady=6)
+        ).grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 12))
         self.boton_resolver_2a = ttk.Button(
-            self.pestana_ejercicio_2a,
+            panel_izquierdo,
             text="Resolver heurística",
             command=self.resolver_ejercicio_2a,
         )
-        self.boton_resolver_2a.grid(row=2, column=2, padx=(20, 0), pady=6)
+        self.boton_resolver_2a.grid(row=4, column=0, sticky="ew", padx=18, pady=(0, 16))
+        self.salida_2a = tk.Text(
+            panel_izquierdo,
+            width=36,
+            wrap="word",
+            state="disabled",
+            borderwidth=0,
+            background="#f7f9f8",
+        )
+        self.salida_2a.grid(row=5, column=0, sticky="nsew", padx=18, pady=(0, 18))
 
-        contenido = ttk.Frame(self.pestana_ejercicio_2a)
-        contenido.grid(row=3, column=0, columnspan=3, sticky="nsew", pady=(16, 0))
-        contenido.columnconfigure(0, weight=1)
-        contenido.columnconfigure(1, weight=2)
-        contenido.rowconfigure(0, weight=1)
-        self.salida_2a = tk.Text(contenido, width=36, wrap="word", state="disabled")
-        self.salida_2a.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
-        visor = ttk.Frame(contenido)
+        visor = ttk.Frame(self.pestana_ejercicio_2a)
         visor.grid(row=0, column=1, sticky="nsew")
         visor.columnconfigure(0, weight=1)
         visor.rowconfigure(0, weight=1)
@@ -300,8 +312,9 @@ class AplicacionTSP:
             corner_radius=0,
         )
         self.mapa_2a.grid(row=0, column=0, sticky="nsew")
-        controles_mapa = ttk.Frame(contenido)
-        controles_mapa.grid(row=1, column=1, sticky="e", pady=(8, 0))
+        self.mapa_2a.bind("<MouseWheel>", self._actualizar_marcadores_despues_zoom)
+        controles_mapa = ttk.Frame(visor)
+        controles_mapa.grid(row=1, column=0, sticky="e", pady=(8, 0))
         ttk.Button(
             controles_mapa,
             text="-",
@@ -403,9 +416,22 @@ class AplicacionTSP:
         self.mapa_2a.delete_all_path()
 
     def _agregar_marcadores(self) -> None:
+        if not hasattr(self, "icono_capital"):
+            self.icono_capital = tk.PhotoImage(width=9, height=9)
+            self.icono_capital.put("#245b63", to=(0, 0, 9, 9))
+            self.icono_inicio = tk.PhotoImage(width=11, height=11)
+            self.icono_inicio.put("#d05a3d", to=(0, 0, 11, 11))
+        mostrar_nombres = self.mapa_2a.zoom >= 6
         for nombre in CAPITALES:
             longitud, latitud = COORDENADAS_CAPITALES[nombre]
-            self.mapa_2a.set_marker(latitud, longitud, text=nombre)
+            self.mapa_2a.set_marker(
+                latitud,
+                longitud,
+                text=nombre if mostrar_nombres else None,
+                icon=self.icono_capital,
+                icon_anchor="center",
+                font=("Segoe UI", 9, "bold"),
+            )
 
     def _centrar_mapa(self) -> None:
         self.mapa_2a.set_position(-35.5, -64.5)
@@ -413,9 +439,36 @@ class AplicacionTSP:
 
     def _acercar_mapa(self) -> None:
         self.mapa_2a.set_zoom(self.mapa_2a.zoom + 1)
+        self._actualizar_marcadores()
 
     def _alejar_mapa(self) -> None:
         self.mapa_2a.set_zoom(self.mapa_2a.zoom - 1)
+        self._actualizar_marcadores()
+
+    def _actualizar_marcadores_despues_zoom(self, _evento: tk.Event) -> None:
+        self.root.after(100, self._actualizar_marcadores)
+
+    def _actualizar_marcadores(self) -> None:
+        ruta = getattr(self, "ruta_mapa_2a", None)
+        self._limpiar_capas_mapa()
+        self._agregar_marcadores()
+        if ruta is not None:
+            posiciones = [
+                (
+                    COORDENADAS_CAPITALES[self.problema_mapa_2a.nombre_ciudad(indice)][1],
+                    COORDENADAS_CAPITALES[self.problema_mapa_2a.nombre_ciudad(indice)][0],
+                )
+                for indice in ruta.recorrido
+            ]
+            self.mapa_2a.set_path(posiciones, color="#d05a3d", width=4)
+            self.mapa_2a.set_marker(
+                posiciones[0][0],
+                posiciones[0][1],
+                text="Inicio" if self.mapa_2a.zoom >= 6 else None,
+                icon=self.icono_inicio,
+                icon_anchor="center",
+                font=("Segoe UI", 9, "bold"),
+            )
 
     def _guardar_mapa(self) -> None:
         if not hasattr(self, "ruta_mapa_2a"):
@@ -429,6 +482,7 @@ class AplicacionTSP:
 
     def _dibujar_ruta(self, ruta: RutaTSP, problema: ProblemaTSP) -> None:
         self.ruta_mapa_2a = ruta
+        self.problema_mapa_2a = problema
         self._limpiar_capas_mapa()
         self._agregar_marcadores()
         posiciones = [
@@ -440,7 +494,14 @@ class AplicacionTSP:
         ]
         self.mapa_2a.set_path(posiciones, color="#d05a3d", width=4)
         inicio = posiciones[0]
-        self.mapa_2a.set_marker(inicio[0], inicio[1], text="Inicio")
+        self.mapa_2a.set_marker(
+            inicio[0],
+            inicio[1],
+            text="Inicio" if self.mapa_2a.zoom >= 6 else None,
+            icon=self.icono_inicio,
+            icon_anchor="center",
+            font=("Segoe UI", 9, "bold"),
+        )
 
     def resolver_ejercicio_1(self) -> None:
         try:
