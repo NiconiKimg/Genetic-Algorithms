@@ -212,10 +212,35 @@ mejor_de_todos = heuristica.resolver_todos_los_inicios()
 
 `resolver()` corresponde al punto 2.a, porque permite elegir la ciudad de partida. `resolver_todos_los_inicios()` resulta util para el punto 2.b, porque ejecuta la heuristica desde cada capital y devuelve la mejor ruta heuristica encontrada.
 
+### `algoritmo_genetico_tsp.py`
+
+Contiene `AlgoritmoGeneticoTSP`, que sigue la segmentacion utilizada en TP1: el orquestador coordina la poblacion, la seleccion, el crossover, la mutacion y el elitismo.
+
+La configuracion por defecto se encuentra en `ConfiguracionGenetica`:
+
+- 50 cromosomas por poblacion.
+- 200 ciclos evolutivos.
+- Crossover ciclico (`CrossoverCiclico`).
+- Mutacion por intercambio (`MutacionIntercambio`).
+- Seleccion por torneo (`SeleccionTorneo`).
+
+El algoritmo devuelve `ResultadoAlgoritmoGenetico`, que contiene la mejor `RutaTSP`, el tiempo de ejecucion y el historial de cada generacion. Como es un metodo aproximado, no garantiza alcanzar el optimo; sus resultados deben compararse con Branch and Bound y la heuristica del vecino mas cercano.
+
+Ejemplo:
+
+```python
+from algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
+from configuracion_genetica import ConfiguracionGenetica
+
+configuracion = ConfiguracionGenetica(semilla=42)
+resultado = AlgoritmoGeneticoTSP(problema, configuracion).resolver()
+```
+
 ## Scripts disponibles
 
 - `scripts/ejercicio_1.py`: ejecuta el ejercicio 1, valida la ruta y muestra el informe.
 - `scripts/comparar_branch_bound.py`: compara los tiempos del Branch and Bound secuencial y paralelo en instancias reducidas.
+- `scripts/ejercicio_2c.py`: ejecuta el algoritmo genetico sobre las 24 capitales.
 
 La interfaz utiliza `TkinterMapView` para mostrar OpenStreetMap en la pestaña 2.a. Requiere conexion a Internet para descargar las teselas del mapa. El visor permite zoom y desplazamiento con el mouse, y la ruta heuristica se dibuja sobre las capitales.
 

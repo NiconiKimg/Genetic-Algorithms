@@ -16,6 +16,8 @@ if str(RAIZ_TP3 / "src") not in sys.path:
 
 from branch_bound import BranchBound
 from branch_bound_paralelo import BranchBoundParalelo
+from algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
+from configuracion_genetica import ConfiguracionGenetica
 from coordenadas_capitales import COORDENADAS_CAPITALES
 from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
 from heuristica_vecino import VecinoMasCercano
@@ -41,6 +43,19 @@ class ResultadoHeuristicoGUI:
     ciudad_inicial: int
     ruta: RutaTSP
     segundos: float
+
+
+@dataclass(frozen=True)
+class ResultadoGeneticoGUI:
+    """Datos del algoritmo genetico para la pestaña 2.c."""
+
+    ciudad_inicial: int
+    ruta: RutaTSP
+    segundos: float
+    cantidad_cromosomas: int
+    cantidad_ciclos: int
+    frecuencia_crossover: float
+    frecuencia_mutacion: float
 
 
 def crear_problema(cantidad_ciudades: int) -> ProblemaTSP:
@@ -93,6 +108,40 @@ def ejecutar_heuristica(ciudad_inicial: int) -> ResultadoHeuristicoGUI:
     )
 
 
+def ejecutar_genetico(
+    ciudad_inicial: int,
+    cantidad_cromosomas: int,
+    cantidad_ciclos: int,
+    frecuencia_crossover: float,
+    frecuencia_mutacion: float,
+    semilla: int | None,
+) -> ResultadoGeneticoGUI:
+    """Ejecuta el algoritmo genetico con los parametros seleccionados."""
+    problema = crear_problema(len(CAPITALES))
+    configuracion = ConfiguracionGenetica(
+        cantidad_cromosomas=cantidad_cromosomas,
+        cantidad_ciclos=cantidad_ciclos,
+        frecuencia_crossover=frecuencia_crossover,
+        frecuencia_mutacion=frecuencia_mutacion,
+        semilla=semilla,
+    )
+    inicio = perf_counter()
+    resultado = AlgoritmoGeneticoTSP(
+        problema,
+        configuracion,
+        ciudad_inicial=ciudad_inicial,
+    ).resolver()
+    return ResultadoGeneticoGUI(
+        ciudad_inicial=ciudad_inicial,
+        ruta=resultado.ruta,
+        segundos=perf_counter() - inicio,
+        cantidad_cromosomas=cantidad_cromosomas,
+        cantidad_ciclos=cantidad_ciclos,
+        frecuencia_crossover=frecuencia_crossover,
+        frecuencia_mutacion=frecuencia_mutacion,
+    )
+
+
 class AplicacionTSP:
     """Ventana principal y navegacion de la aplicacion del TP3."""
 
@@ -112,6 +161,12 @@ class AplicacionTSP:
         self.algoritmo = tk.StringVar(value="Branch and Bound secuencial")
         self.cantidad_procesos = tk.IntVar(value=2)
         self.ciudad_inicial_heuristica = tk.StringVar(value=CAPITALES[0])
+        self.ciudad_inicial_genetico = tk.StringVar(value=CAPITALES[0])
+        self.cantidad_cromosomas = tk.IntVar(value=50)
+        self.cantidad_ciclos = tk.IntVar(value=200)
+        self.frecuencia_crossover = tk.DoubleVar(value=0.90)
+        self.frecuencia_mutacion = tk.DoubleVar(value=0.10)
+        self.semilla_genetica = tk.StringVar(value="42")
         self.estado = tk.StringVar(value="Listo para ejecutar el ejercicio 1.")
 
     def _crear_estilos(self) -> None:
@@ -146,12 +201,15 @@ class AplicacionTSP:
         self.pestana_inicio = ttk.Frame(self.pestanas, padding=24)
         self.pestana_ejercicio_1 = ttk.Frame(self.pestanas, padding=20)
         self.pestana_ejercicio_2a = ttk.Frame(self.pestanas, padding=20)
+        self.pestana_ejercicio_2c = ttk.Frame(self.pestanas, padding=20)
         self.pestanas.add(self.pestana_inicio, text="Inicio")
         self.pestanas.add(self.pestana_ejercicio_1, text="Ejercicio 1")
         self.pestanas.add(self.pestana_ejercicio_2a, text="Ejercicio 2.a")
+        self.pestanas.add(self.pestana_ejercicio_2c, text="Ejercicio 2.c")
         self._crear_inicio()
         self._crear_ejercicio_1()
         self._crear_ejercicio_2a()
+        self._crear_ejercicio_2c()
 
         ttk.Label(contenedor, textvariable=self.estado).pack(anchor="w", pady=(12, 0))
 
@@ -177,6 +235,11 @@ class AplicacionTSP:
             marco,
             text="Ejercicio 2.a - Vecino más cercano",
             command=self.mostrar_ejercicio_2a,
+        ).pack(ipadx=18, ipady=8, pady=(10, 0))
+        ttk.Button(
+            marco,
+            text="Ejercicio 2.c - Algoritmo genético",
+            command=self.mostrar_ejercicio_2c,
         ).pack(ipadx=18, ipady=8, pady=(10, 0))
 
     def _crear_ejercicio_1(self) -> None:
@@ -251,6 +314,9 @@ class AplicacionTSP:
 
     def mostrar_ejercicio_2a(self) -> None:
         self.pestanas.select(self.pestana_ejercicio_2a)
+
+    def mostrar_ejercicio_2c(self) -> None:
+        self.pestanas.select(self.pestana_ejercicio_2c)
 
     def _crear_ejercicio_2a(self) -> None:
         self.pestana_ejercicio_2a.columnconfigure(0, weight=0, minsize=330)
@@ -339,6 +405,45 @@ class AplicacionTSP:
         ).pack(side="left", padx=(10, 2))
         self._dibujar_mapa_base()
 
+    def _crear_ejercicio_2c(self) -> None:
+        self.pestana_ejercicio_2c.columnconfigure(0, weight=0, minsize=330)
+        self.pestana_ejercicio_2c.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_2c.rowconfigure(0, weight=1)
+        panel = tk.Frame(self.pestana_ejercicio_2c, borderwidth=1, relief="solid", background="#f7f9f8")
+        panel.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+        panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(9, weight=1)
+        ttk.Label(panel, text="Ejercicio 2.c", style="Titulo.TLabel").grid(row=0, column=0, sticky="w", padx=18, pady=(18, 3))
+        ttk.Label(panel, text="Algoritmo genético", style="Subtitulo.TLabel").grid(row=1, column=0, sticky="w", padx=18, pady=(0, 14))
+        ttk.Label(panel, text="Ciudad de partida:").grid(row=2, column=0, sticky="w", padx=18, pady=(0, 4))
+        ttk.Combobox(panel, textvariable=self.ciudad_inicial_genetico, values=CAPITALES, state="readonly").grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 8))
+        parametros = (
+            ("Cromosomas (N):", self.cantidad_cromosomas, 50, 500),
+            ("Ciclos (M):", self.cantidad_ciclos, 1, 2000),
+            ("Crossover (0 a 1):", self.frecuencia_crossover, 0.0, 1.0),
+            ("Mutación (0 a 1):", self.frecuencia_mutacion, 0.0, 1.0),
+        )
+        for fila, (texto, variable, minimo, maximo) in enumerate(parametros, start=4):
+            ttk.Label(panel, text=texto).grid(row=fila, column=0, sticky="w", padx=18, pady=(2, 2))
+            ttk.Spinbox(panel, from_=minimo, to=maximo, increment=0.01 if isinstance(variable, tk.DoubleVar) else 1, textvariable=variable).grid(row=fila, column=0, sticky="ew", padx=18, pady=(0, 5))
+        ttk.Label(panel, text="Semilla (opcional):").grid(row=8, column=0, sticky="w", padx=18, pady=(2, 2))
+        ttk.Entry(panel, textvariable=self.semilla_genetica).grid(row=9, column=0, sticky="ew", padx=18, pady=(0, 8))
+        self.boton_resolver_2c = ttk.Button(panel, text="Resolver algoritmo genético", command=self.resolver_ejercicio_2c)
+        self.boton_resolver_2c.grid(row=10, column=0, sticky="ew", padx=18, pady=(0, 12))
+        self.salida_2c = tk.Text(panel, width=36, wrap="word", state="disabled", borderwidth=0, background="#f7f9f8")
+        self.salida_2c.grid(row=11, column=0, sticky="nsew", padx=18, pady=(0, 18))
+
+        visor = ttk.Frame(self.pestana_ejercicio_2c)
+        visor.grid(row=0, column=1, sticky="nsew")
+        visor.columnconfigure(0, weight=1)
+        visor.rowconfigure(0, weight=1)
+        self.mapa_2c = TkinterMapView(visor, corner_radius=0)
+        self.mapa_2c.grid(row=0, column=0, sticky="nsew")
+        ttk.Label(visor, text="OpenStreetMap · la ruta se dibuja al resolver", anchor="e").grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        self.mapa_2c.set_position(-35.5, -64.5)
+        self.mapa_2c.set_zoom(4)
+        self._agregar_marcadores_en(self.mapa_2c)
+
     def resolver_ejercicio_2a(self) -> None:
         ciudad = self.ciudad_inicial_heuristica.get()
         if ciudad not in CAPITALES:
@@ -353,6 +458,85 @@ class AplicacionTSP:
             daemon=True,
         ).start()
         self.root.after(100, self._consultar_resultado_2a)
+
+    def resolver_ejercicio_2c(self) -> None:
+        try:
+            cantidad = self.cantidad_cromosomas.get()
+            ciclos = self.cantidad_ciclos.get()
+            crossover = self.frecuencia_crossover.get()
+            mutacion = self.frecuencia_mutacion.get()
+            semilla_texto = self.semilla_genetica.get().strip()
+            semilla = int(semilla_texto) if semilla_texto else None
+            ConfiguracionGenetica(cantidad, ciclos, crossover, mutacion, semilla=semilla)
+        except (tk.TclError, ValueError) as error:
+            messagebox.showerror("Datos inválidos", str(error))
+            return
+        self.boton_resolver_2c.configure(state="disabled")
+        self.estado.set("Ejecutando el algoritmo genético...")
+        self._escribir_salida_2c("Calculando resultado...\n")
+        parametros = (
+            CAPITALES.index(self.ciudad_inicial_genetico.get()),
+            cantidad,
+            ciclos,
+            crossover,
+            mutacion,
+            semilla,
+        )
+        threading.Thread(target=self._trabajar_2c, args=parametros, daemon=True).start()
+        self.root.after(100, self._consultar_resultado_2c)
+
+    def _trabajar_2c(self, *parametros: object) -> None:
+        try:
+            resultado = ejecutar_genetico(*parametros)
+            self.resultados.put(("genetico", resultado))
+        except Exception as error:
+            self.resultados.put(("error_2c", error))
+
+    def _consultar_resultado_2c(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado_2c)
+            return
+        self.boton_resolver_2c.configure(state="normal")
+        if tipo == "error_2c":
+            self.estado.set("El algoritmo genético terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+        if tipo != "genetico" or not isinstance(valor, ResultadoGeneticoGUI):
+            self.resultados.put((tipo, valor))
+            self.root.after(100, self._consultar_resultado_2c)
+            return
+        self.estado.set("Ejecución genética finalizada.")
+        self._mostrar_resultado_2c(valor)
+
+    def _mostrar_resultado_2c(self, resultado: ResultadoGeneticoGUI) -> None:
+        problema = crear_problema(len(CAPITALES))
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}"
+            for indice, nombre in enumerate(resultado.ruta.nombres(problema))
+        )
+        texto = "\n".join((
+            "Algoritmo: Algoritmo genético",
+            f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
+            f"Cromosomas: {resultado.cantidad_cromosomas}",
+            f"Ciclos: {resultado.cantidad_ciclos}",
+            f"Crossover cíclico: {resultado.frecuencia_crossover:.0%}",
+            f"Mutación: {resultado.frecuencia_mutacion:.0%}",
+            f"Distancia total: {resultado.ruta.distancia_total} km",
+            f"Tiempo de ejecución: {resultado.segundos:.6f} s",
+            "",
+            "Mejor recorrido:",
+            nombres,
+        ))
+        self._escribir_salida_2c(texto)
+        self._dibujar_ruta_en(self.mapa_2c, resultado.ruta, problema)
+
+    def _escribir_salida_2c(self, texto: str) -> None:
+        self.salida_2c.configure(state="normal")
+        self.salida_2c.delete("1.0", tk.END)
+        self.salida_2c.insert(tk.END, texto)
+        self.salida_2c.configure(state="disabled")
 
     def _trabajar_2a(self, ciudad_inicial: int) -> None:
         try:
@@ -416,15 +600,18 @@ class AplicacionTSP:
         self.mapa_2a.delete_all_path()
 
     def _agregar_marcadores(self) -> None:
+        self._agregar_marcadores_en(self.mapa_2a)
+
+    def _agregar_marcadores_en(self, mapa: TkinterMapView) -> None:
         if not hasattr(self, "icono_capital"):
             self.icono_capital = tk.PhotoImage(width=9, height=9)
             self.icono_capital.put("#245b63", to=(0, 0, 9, 9))
             self.icono_inicio = tk.PhotoImage(width=11, height=11)
             self.icono_inicio.put("#d05a3d", to=(0, 0, 11, 11))
-        mostrar_nombres = self.mapa_2a.zoom >= 6
+        mostrar_nombres = mapa.zoom >= 6
         for nombre in CAPITALES:
             longitud, latitud = COORDENADAS_CAPITALES[nombre]
-            self.mapa_2a.set_marker(
+            mapa.set_marker(
                 latitud,
                 longitud,
                 text=nombre if mostrar_nombres else None,
@@ -498,6 +685,27 @@ class AplicacionTSP:
             inicio[0],
             inicio[1],
             text="Inicio" if self.mapa_2a.zoom >= 6 else None,
+            icon=self.icono_inicio,
+            icon_anchor="center",
+            font=("Segoe UI", 9, "bold"),
+        )
+
+    def _dibujar_ruta_en(self, mapa: TkinterMapView, ruta: RutaTSP, problema: ProblemaTSP) -> None:
+        mapa.delete_all_marker()
+        mapa.delete_all_path()
+        self._agregar_marcadores_en(mapa)
+        posiciones = [
+            (
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][1],
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][0],
+            )
+            for indice in ruta.recorrido
+        ]
+        mapa.set_path(posiciones, color="#d05a3d", width=4)
+        mapa.set_marker(
+            posiciones[0][0],
+            posiciones[0][1],
+            text="Inicio" if mapa.zoom >= 6 else None,
             icon=self.icono_inicio,
             icon_anchor="center",
             font=("Segoe UI", 9, "bold"),
