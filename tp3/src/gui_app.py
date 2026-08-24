@@ -8,6 +8,7 @@ import threading
 from time import perf_counter
 import tkinter as tk
 from tkinter import messagebox, ttk
+from tkintermapview import TkinterMapView
 
 RAIZ_TP3 = Path(__file__).resolve().parents[1]
 if str(RAIZ_TP3 / "src") not in sys.path:
@@ -101,6 +102,7 @@ class AplicacionTSP:
         self.root.geometry("820x620")
         self.root.minsize(700, 500)
         self.resultados: queue.Queue[tuple[str, object]] = queue.Queue()
+        self.zoom_2a = 1.0
         self._crear_variables()
         self._crear_estilos()
         self._crear_interfaz()
@@ -289,14 +291,39 @@ class AplicacionTSP:
         contenido.rowconfigure(0, weight=1)
         self.salida_2a = tk.Text(contenido, width=36, wrap="word", state="disabled")
         self.salida_2a.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
-        self.mapa_2a = tk.Canvas(
-            contenido,
-            background="#f2f5f4",
-            highlightthickness=1,
-            highlightbackground="#b8c8c2",
+        visor = ttk.Frame(contenido)
+        visor.grid(row=0, column=1, sticky="nsew")
+        visor.columnconfigure(0, weight=1)
+        visor.rowconfigure(0, weight=1)
+        self.mapa_2a = TkinterMapView(
+            visor,
+            corner_radius=0,
         )
-        self.mapa_2a.grid(row=0, column=1, sticky="nsew")
-        self.mapa_2a.bind("<Configure>", self._redibujar_mapa)
+        self.mapa_2a.grid(row=0, column=0, sticky="nsew")
+        controles_mapa = ttk.Frame(contenido)
+        controles_mapa.grid(row=1, column=1, sticky="e", pady=(8, 0))
+        ttk.Button(
+            controles_mapa,
+            text="-",
+            width=3,
+            command=self._alejar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="100%",
+            command=self._centrar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="+",
+            width=3,
+            command=self._acercar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="Guardar imagen",
+            command=self._guardar_mapa,
+        ).pack(side="left", padx=(10, 2))
         self._dibujar_mapa_base()
 
     def resolver_ejercicio_2a(self) -> None:
@@ -366,70 +393,54 @@ class AplicacionTSP:
         self.salida_2a.configure(state="disabled")
 
     def _dibujar_mapa_base(self) -> None:
-        self.mapa_2a.delete("all")
-        self.mapa_2a.create_text(
-            12,
-            12,
-            anchor="nw",
-            text="Mapa esquemático de la República Argentina",
-            fill="#34443e",
-            font=("Segoe UI", 10, "bold"),
-        )
+        self.mapa_2a.set_position(-35.5, -64.5)
+        self.mapa_2a.set_zoom(4)
+        self._limpiar_capas_mapa()
+        self._agregar_marcadores()
 
-    def _redibujar_mapa(self, _evento: tk.Event) -> None:
+    def _limpiar_capas_mapa(self) -> None:
+        self.mapa_2a.delete_all_marker()
+        self.mapa_2a.delete_all_path()
+
+    def _agregar_marcadores(self) -> None:
+        for nombre in CAPITALES:
+            longitud, latitud = COORDENADAS_CAPITALES[nombre]
+            self.mapa_2a.set_marker(latitud, longitud, text=nombre)
+
+    def _centrar_mapa(self) -> None:
+        self.mapa_2a.set_position(-35.5, -64.5)
+        self.mapa_2a.set_zoom(4)
+
+    def _acercar_mapa(self) -> None:
+        self.mapa_2a.set_zoom(self.mapa_2a.zoom + 1)
+
+    def _alejar_mapa(self) -> None:
+        self.mapa_2a.set_zoom(self.mapa_2a.zoom - 1)
+
+    def _guardar_mapa(self) -> None:
         if not hasattr(self, "ruta_mapa_2a"):
-            self._dibujar_mapa_base()
+            messagebox.showinfo("Mapa", "Primero debe resolver el ejercicio 2.a.")
             return
-        self._dibujar_ruta(self.ruta_mapa_2a, crear_problema(len(CAPITALES)))
+        messagebox.showinfo(
+            "Mapa de OpenStreetMap",
+            "El mapa es interactivo: puede hacer zoom y desplazarse con el mouse.\n"
+            "Para conservarlo, use una captura de pantalla del visor.",
+        )
 
     def _dibujar_ruta(self, ruta: RutaTSP, problema: ProblemaTSP) -> None:
         self.ruta_mapa_2a = ruta
-        self.mapa_2a.delete("all")
-        ancho = max(self.mapa_2a.winfo_width(), 420)
-        alto = max(self.mapa_2a.winfo_height(), 360)
-        longitudes = [COORDENADAS_CAPITALES[nombre][0] for nombre in CAPITALES]
-        latitudes = [COORDENADAS_CAPITALES[nombre][1] for nombre in CAPITALES]
-        min_lon, max_lon = min(longitudes), max(longitudes)
-        min_lat, max_lat = min(latitudes), max(latitudes)
-
-        def punto(indice: int) -> tuple[float, float]:
-            nombre = problema.nombre_ciudad(indice)
-            longitud, latitud = COORDENADAS_CAPITALES[nombre]
-            x = 30 + (longitud - min_lon) / (max_lon - min_lon) * (ancho - 60)
-            y = 38 + (max_lat - latitud) / (max_lat - min_lat) * (alto - 78)
-            return x, y
-
-        self.mapa_2a.create_text(
-            12,
-            12,
-            anchor="nw",
-            text="Mapa esquemático - recorrido heurístico",
-            fill="#34443e",
-            font=("Segoe UI", 10, "bold"),
-        )
-        puntos = [punto(indice) for indice in ruta.recorrido]
-        for origen, destino in zip(puntos, puntos[1:]):
-            self.mapa_2a.create_line(*origen, *destino, fill="#197c72", width=2)
-        for indice, (x, y) in zip(ruta.recorrido[:-1], puntos[:-1]):
-            inicio = indice == ruta.recorrido[0]
-            color = "#d05a3d" if inicio else "#245b63"
-            radio = 6 if inicio else 4
-            self.mapa_2a.create_oval(
-                x - radio,
-                y - radio,
-                x + radio,
-                y + radio,
-                fill=color,
-                outline="white",
+        self._limpiar_capas_mapa()
+        self._agregar_marcadores()
+        posiciones = [
+            (
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][1],
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][0],
             )
-            self.mapa_2a.create_text(
-                x + 7,
-                y,
-                anchor="w",
-                text=problema.nombre_ciudad(indice),
-                fill="#28332f",
-                font=("Segoe UI", 7),
-            )
+            for indice in ruta.recorrido
+        ]
+        self.mapa_2a.set_path(posiciones, color="#d05a3d", width=4)
+        inicio = posiciones[0]
+        self.mapa_2a.set_marker(inicio[0], inicio[1], text="Inicio")
 
     def resolver_ejercicio_1(self) -> None:
         try:

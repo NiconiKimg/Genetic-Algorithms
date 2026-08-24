@@ -19,7 +19,8 @@ Thumbs.db
 venv/
 .env/
 env/
-
+.venv/
+venv/
 
 # Ignore notebook outputs (optional, if you want to keep notebooks clean)
 # tp1/notebooks/*.ipynb

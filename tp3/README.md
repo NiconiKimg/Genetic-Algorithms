@@ -217,6 +217,8 @@ mejor_de_todos = heuristica.resolver_todos_los_inicios()
 - `scripts/ejercicio_1.py`: ejecuta el ejercicio 1, valida la ruta y muestra el informe.
 - `scripts/comparar_branch_bound.py`: compara los tiempos del Branch and Bound secuencial y paralelo en instancias reducidas.
 
+La interfaz utiliza `TkinterMapView` para mostrar OpenStreetMap en la pestaña 2.a. Requiere conexion a Internet para descargar las teselas del mapa. El visor permite zoom y desplazamiento con el mouse, y la ruta heuristica se dibuja sobre las capitales.
+
 Para ejecutar el ejercicio sobre una instancia pequeña:
 
 ```powershell
