@@ -3,9 +3,9 @@
 import random
 
 try:
-    from .modelos_tsp import IndividuoTSP
+    from comun.modelos_tsp import IndividuoTSP
 except ImportError:
-    from modelos_tsp import IndividuoTSP
+    from comun.modelos_tsp import IndividuoTSP
 
 
 class SeleccionTorneo:

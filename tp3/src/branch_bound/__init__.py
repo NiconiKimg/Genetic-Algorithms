@@ -1,0 +1,1 @@
+"""Implementaciones secuencial y paralela de Branch and Bound."""

@@ -1,9 +1,9 @@
 """Heuristica del vecino mas cercano para el Problema del Viajante."""
 
 try:
-    from .modelos_tsp import ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import ProblemaTSP, RutaTSP
 except ImportError:
-    from modelos_tsp import ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import ProblemaTSP, RutaTSP
 
 
 class VecinoMasCercano:

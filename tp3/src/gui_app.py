@@ -14,14 +14,14 @@ RAIZ_TP3 = Path(__file__).resolve().parents[1]
 if str(RAIZ_TP3 / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ_TP3 / "src"))
 
-from branch_bound import BranchBound
-from branch_bound_paralelo import BranchBoundParalelo
-from algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
-from configuracion_genetica import ConfiguracionGenetica
-from coordenadas_capitales import COORDENADAS_CAPITALES
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from heuristica_vecino import VecinoMasCercano
-from modelos_tsp import ProblemaTSP, RutaTSP
+from branch_bound.branch_bound import BranchBound
+from branch_bound.branch_bound_paralelo import BranchBoundParalelo
+from genetico.algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
+from genetico.configuracion_genetica import ConfiguracionGenetica
+from heuristica.heuristica_vecino import VecinoMasCercano
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.modelos_tsp import ProblemaTSP, RutaTSP
+from visualizacion.coordenadas_capitales import COORDENADAS_CAPITALES
 
 
 @dataclass(frozen=True)

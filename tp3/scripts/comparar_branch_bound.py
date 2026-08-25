@@ -6,10 +6,10 @@ from time import perf_counter
 
 sys.path.insert(0, "tp3/src")
 
-from branch_bound import BranchBound
-from branch_bound_paralelo import BranchBoundParalelo
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from modelos_tsp import ProblemaTSP
+from branch_bound.branch_bound import BranchBound
+from branch_bound.branch_bound_paralelo import BranchBoundParalelo
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.modelos_tsp import ProblemaTSP
 
 
 @dataclass(frozen=True)

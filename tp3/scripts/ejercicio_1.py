@@ -9,9 +9,9 @@ from time import perf_counter
 RAIZ_TP3 = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ_TP3 / "src"))
 
-from branch_bound import BranchBound, ResultadoBranchBound
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from modelos_tsp import ProblemaTSP, RutaTSP
+from branch_bound.branch_bound import BranchBound, ResultadoBranchBound
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.modelos_tsp import ProblemaTSP, RutaTSP
 
 
 @dataclass(frozen=True)

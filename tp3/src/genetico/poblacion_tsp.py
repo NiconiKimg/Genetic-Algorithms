@@ -3,9 +3,9 @@
 import random
 
 try:
-    from .modelos_tsp import EvaluadorRutas, IndividuoTSP, RutaTSP
+    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, RutaTSP
 except ImportError:
-    from modelos_tsp import EvaluadorRutas, IndividuoTSP, RutaTSP
+    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, RutaTSP
 
 
 class PoblacionTSP:

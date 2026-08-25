@@ -5,11 +5,11 @@ import multiprocessing
 from typing import Iterable
 
 try:
-    from .datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-    from .modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
 except ImportError:
-    from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-    from modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
 
 
 @dataclass(frozen=True)

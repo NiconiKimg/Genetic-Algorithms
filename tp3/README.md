@@ -4,7 +4,19 @@ Este trabajo implementa el Problema del Viajante (TSP) sobre las capitales de pr
 
 ## Modulos de `src`
 
-### `datos_distancia_capitales.py`
+Los componentes estan organizados por responsabilidad:
+
+```text
+src/
+├── comun/          modelos y datos compartidos
+├── branch_bound/   algoritmos exactos
+├── heuristica/     vecino mas cercano
+├── genetico/       algoritmo genetico y operadores
+├── visualizacion/  coordenadas y mapa
+└── gui_app.py      interfaz Tkinter
+```
+
+### `comun/datos_distancia_capitales.py`
 
 Contiene los datos de la instancia del problema:
 
@@ -16,14 +28,14 @@ Contiene los datos de la instancia del problema:
 Ejemplo:
 
 ```python
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
 
 origen = CAPITALES[0]
 destino = CAPITALES[1]
 distancia = DISTANCIAS_KM[0][1]
 ```
 
-### `modelos_tsp.py`
+### `comun/modelos_tsp.py`
 
 Define las clases de dominio compartidas por todos los algoritmos.
 
@@ -85,7 +97,7 @@ Metodos principales:
 
 Representa un cromosoma como una tupla inmutable y opcionalmente guarda su distancia total. `evaluar()` devuelve el individuo evaluado, `ruta()` lo convierte en una ruta cerrada y `fitness` devuelve `1 / distancia_total`.
 
-### `branch_bound.py`
+### `branch_bound/branch_bound.py`
 
 Contiene el Branch and Bound secuencial.
 
@@ -96,9 +108,9 @@ Resuelve una instancia de `ProblemaTSP` de forma exacta. Utiliza una unica mejor
 Uso basico:
 
 ```python
-from branch_bound import BranchBound
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from modelos_tsp import ProblemaTSP
+from branch_bound.branch_bound import BranchBound
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.modelos_tsp import ProblemaTSP
 
 problema = ProblemaTSP(CAPITALES, DISTANCIAS_KM)
 resultado = BranchBound(problema).resolver()
@@ -115,7 +127,7 @@ Contiene el resultado de la busqueda:
 - `nodos_explorados`: cantidad de nodos procesados.
 - `nodos_podados`: cantidad de nodos descartados mediante la cota inferior.
 
-### `branch_bound_paralelo.py`
+### `branch_bound/branch_bound_paralelo.py`
 
 Contiene una version paralela de Branch and Bound. Divide el arbol en ramas iniciales y las procesa mediante procesos independientes.
 
@@ -160,7 +172,7 @@ Para un algoritmo genetico se recomienda utilizar:
 
 `NodoBusqueda` pertenece especificamente a las estrategias de exploracion de arbol y no es necesario para representar individuos de un algoritmo genetico.
 
-### `configuracion_genetica.py`
+### `genetico/configuracion_genetica.py`
 
 Contiene `ConfiguracionGenetica`, una clase con los parametros del algoritmo genetico. Sus valores por defecto siguen las recomendaciones del enunciado:
 
@@ -172,7 +184,7 @@ Contiene `ConfiguracionGenetica`, una clase con los parametros del algoritmo gen
 
 Las frecuencias y la semilla aleatoria pueden modificarse para comparar experimentos.
 
-### `poblacion_tsp.py`
+### `genetico/poblacion_tsp.py`
 
 Contiene `PoblacionTSP`, responsable de generar, evaluar y administrar individuos.
 
@@ -182,7 +194,7 @@ Contiene `PoblacionTSP`, responsable de generar, evaluar y administrar individuo
 - `mejor_ruta(evaluador, ciudad_inicial)`: devuelve el mejor individuo como `RutaTSP`.
 - `conservar_elite(individuo)`: conserva una solucion elite reemplazando al peor individuo.
 
-### `operadores_geneticos.py`
+### `genetico/operadores_geneticos.py`
 
 Contiene operadores que conservan la validez de las permutaciones.
 
@@ -198,12 +210,12 @@ Implementa el crossover ciclico (Cycle Crossover, CX) recomendado por el enuncia
 
 Intercambia dos posiciones del cromosoma. Al operar sobre una permutacion, mantiene siempre una ruta valida.
 
-### `heuristica_vecino.py`
+### `heuristica/heuristica_vecino.py`
 
 Contiene `VecinoMasCercano`, que implementa la heuristica solicitada: desde la ciudad actual visita la ciudad no visitada mas cercana y, despues de visitar todas, regresa a la ciudad inicial.
 
 ```python
-from heuristica_vecino import VecinoMasCercano
+from heuristica.heuristica_vecino import VecinoMasCercano
 
 heuristica = VecinoMasCercano(problema)
 ruta = heuristica.resolver(ciudad_inicial=0)
@@ -212,7 +224,7 @@ mejor_de_todos = heuristica.resolver_todos_los_inicios()
 
 `resolver()` corresponde al punto 2.a, porque permite elegir la ciudad de partida. `resolver_todos_los_inicios()` resulta util para el punto 2.b, porque ejecuta la heuristica desde cada capital y devuelve la mejor ruta heuristica encontrada.
 
-### `algoritmo_genetico_tsp.py`
+### `genetico/algoritmo_genetico_tsp.py`
 
 Contiene `AlgoritmoGeneticoTSP`, que sigue la segmentacion utilizada en TP1: el orquestador coordina la poblacion, la seleccion, el crossover, la mutacion y el elitismo.
 
@@ -229,12 +241,16 @@ El algoritmo devuelve `ResultadoAlgoritmoGenetico`, que contiene la mejor `RutaT
 Ejemplo:
 
 ```python
-from algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
-from configuracion_genetica import ConfiguracionGenetica
+from genetico.algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
+from genetico.configuracion_genetica import ConfiguracionGenetica
 
 configuracion = ConfiguracionGenetica(semilla=42)
 resultado = AlgoritmoGeneticoTSP(problema, configuracion).resolver()
 ```
+
+### `visualizacion/` y `gui_app.py`
+
+`visualizacion/` contiene las coordenadas de las capitales y el contorno de respaldo. `gui_app.py` contiene la interfaz Tkinter y utiliza `TkinterMapView` para mostrar OpenStreetMap.
 
 ## Scripts disponibles
 
@@ -254,4 +270,10 @@ Para ejecutar el problema completo:
 
 ```powershell
 .\env\Scripts\python.exe tp3/scripts/ejercicio_1.py
+```
+
+Para iniciar la interfaz grafica:
+
+```powershell
+.\env\Scripts\python.exe tp3/src/gui_app.py
 ```

@@ -6,7 +6,7 @@ from time import perf_counter
 
 try:
     from .configuracion_genetica import ConfiguracionGenetica
-    from .modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
     from .operadores_geneticos import (
         CrossoverCiclico,
         MutacionIntercambio,
@@ -15,7 +15,7 @@ try:
     from .poblacion_tsp import PoblacionTSP
 except ImportError:
     from configuracion_genetica import ConfiguracionGenetica
-    from modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
     from operadores_geneticos import CrossoverCiclico, MutacionIntercambio, SeleccionTorneo
     from poblacion_tsp import PoblacionTSP
 

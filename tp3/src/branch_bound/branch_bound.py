@@ -9,7 +9,7 @@ try:
         _ruta_vecino_mas_cercano,
         crear_problema_capitales,
     )
-    from .modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
 except ImportError:
     from branch_bound_paralelo import (
         _costo_arbol_generador_minimo,
@@ -17,7 +17,7 @@ except ImportError:
         _ruta_vecino_mas_cercano,
         crear_problema_capitales,
     )
-    from modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
 
 
 @dataclass(frozen=True)

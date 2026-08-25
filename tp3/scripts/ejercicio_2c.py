@@ -6,10 +6,10 @@ import sys
 RAIZ_TP3 = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ_TP3 / "src"))
 
-from algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
-from configuracion_genetica import ConfiguracionGenetica
-from datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from modelos_tsp import ProblemaTSP
+from genetico.algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
+from genetico.configuracion_genetica import ConfiguracionGenetica
+from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+from comun.modelos_tsp import ProblemaTSP
 
 
 def main() -> None:
