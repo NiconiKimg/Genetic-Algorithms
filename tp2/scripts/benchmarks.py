@@ -70,7 +70,7 @@ def ejecutar_benchmarks_e1_e2(
 def ejecutar_benchmarks() -> str:
     """Ejecuta el conjunto de benchmarks automáticos y exporta la tabla de métricas"""
     logger = Logger()
-    ejecutar_benchmarks_e1_e2(logger, valores_n=[4, 6, 8, 10], repeticiones=5)
+    ejecutar_benchmarks_e1_e2(logger, valores_n=[3,4,5,6,7,8,9,10], repeticiones=5)
     dir_salida = Path(__file__).resolve().parent.parent / "outputs"
     return logger.exportar_tabla(dir_salida, "benchmarks")
 
