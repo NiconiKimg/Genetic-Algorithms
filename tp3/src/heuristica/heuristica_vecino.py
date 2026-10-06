@@ -1,19 +1,17 @@
-"""Heuristica del vecino mas cercano para el Problema del Viajante."""
+"""Heurística del vecino más cercano para el Problema del Viajante."""
 
-try:
-    from comun.modelos_tsp import ProblemaTSP, RutaTSP
-except ImportError:
-    from comun.modelos_tsp import ProblemaTSP, RutaTSP
+from comun.modelos_tsp import ProblemaTSP, RutaTSP
 
 
 class VecinoMasCercano:
-    """Construye una ruta eligiendo siempre el vecino no visitado mas cercano."""
+    """Construye una ruta eligiendo iterativamente la ciudad más próxima no visitada."""
 
     def __init__(self, problema: ProblemaTSP) -> None:
+        """Inicializa la heurística con la instancia del problema."""
         self.problema = problema
 
     def resolver(self, ciudad_inicial: int = 0) -> RutaTSP:
-        """Resuelve desde una ciudad y regresa a ella al finalizar."""
+        """Construye la ruta voraz partiendo desde una ciudad y regresando a ella."""
         self._validar_ciudad(ciudad_inicial)
         recorrido = [ciudad_inicial]
         no_visitadas = set(range(self.problema.cantidad_ciudades))
@@ -38,7 +36,7 @@ class VecinoMasCercano:
         return RutaTSP(tuple(recorrido), distancia_total)
 
     def resolver_todos_los_inicios(self) -> RutaTSP:
-        """Devuelve la mejor ruta heuristica probando cada ciudad como inicio."""
+        """Retorna la mejor ruta heurística evaluando cada ciudad del problema como punto de partida."""
         rutas = (
             self.resolver(ciudad_inicial)
             for ciudad_inicial in range(self.problema.cantidad_ciudades)
@@ -46,5 +44,6 @@ class VecinoMasCercano:
         return min(rutas, key=lambda ruta: ruta.distancia_total)
 
     def _validar_ciudad(self, ciudad: int) -> None:
+        """Verifica que el identificador de la ciudad pertenezca al rango del problema."""
         if not 0 <= ciudad < self.problema.cantidad_ciudades:
             raise ValueError("La ciudad inicial no existe en el problema.")

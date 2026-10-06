@@ -1,279 +1,36 @@
-# TP3 - Problema del Viajante
+# El problema del Viajante
 
-Este trabajo implementa el Problema del Viajante (TSP) sobre las capitales de provincia de la República Argentina. La carpeta `src` contiene los datos y las clases reutilizables para resolver los distintos puntos mediante algoritmos exactos, busqueda heuristica y algoritmos geneticos.
+El problema del viajante (también conocido como problema del viajante de comercio o por sus siglas en inglés: **TSP** (*Traveling Salesman Problem*)), es uno de los problemas más famosos (y quizás el mejor estudiado) en el campo de la optimización combinatoria computacional.
 
-## Modulos de `src`
+A pesar de la aparente sencillez de su planteamiento, el TSP es uno de los más complejos de resolver.
 
-Los componentes estan organizados por responsabilidad:
+**Definición:** Sean $N$ ciudades de un territorio. La distancia entre cada ciudad viene dada por la matriz $D: N \times N$, donde $d[x,y]$ representa la distancia que hay entre la ciudad $X$ y la ciudad $Y$.
 
-```text
-src/
-├── comun/          modelos y datos compartidos
-├── branch_bound/   algoritmos exactos
-├── heuristica/     vecino mas cercano
-├── genetico/       algoritmo genetico y operadores
-├── visualizacion/  coordenadas y mapa
-└── gui_app.py      interfaz Tkinter
-```
+El objetivo es encontrar una ruta que, comenzando y terminando en una ciudad concreta, pase una sola vez por cada una de las ciudades y minimice la distancia recorrida por el viajante.
 
-### `comun/datos_distancia_capitales.py`
+---
 
-Contiene los datos de la instancia del problema:
+## Ejercicios
 
-- `CAPITALES`: nombres de las 24 capitales.
-- `DISTANCIAS_KM`: matriz simetrica de distancias en kilometros.
-- `INDICE_CAPITALES`: diccionario que relaciona cada nombre con su indice en la matriz.
-- `validar_datos()`: verifica que la matriz sea cuadrada, tenga diagonal cero y sea simetrica.
+1. Hallar la ruta de distancia mínima que logre unir todas las capitales de provincias de la República Argentina, utilizando un **método exhaustivo**. ¿Puede resolver el problema? Justificar de manera teórica.
+2. Realizar un programa que cuente con un **menú con las siguientes opciones**:
+   - **a)** Permitir ingresar una provincia y hallar la ruta de distancia mínima que logre unir todas las capitales de provincias de la República Argentina partiendo de dicha capital utilizando la siguiente heurística: *“Desde cada ciudad ir a la ciudad más cercana no visitada.”* Recordar regresar siempre a la ciudad de partida. Presentar un mapa de la República con el recorrido indicado. Además indicar la ciudad de partida, el recorrido completo y la longitud del trayecto. El programa deberá permitir seleccionar la capital que el usuario desee ingresar como inicio del recorrido.
+   - **b)** Encontrar el recorrido mínimo para visitar todas las capitales de las provincias de la República Argentina siguiendo la heurística mencionada en el punto a. Deberá mostrar como salida el recorrido y la longitud del trayecto.
+   - **c)** Hallar la ruta de distancia mínima que logre unir todas las capitales de provincias de la República Argentina, utilizando un **algoritmo genético**.
 
-Ejemplo:
+---
 
-```python
-from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
+## Recomendaciones para el algoritmo
 
-origen = CAPITALES[0]
-destino = CAPITALES[1]
-distancia = DISTANCIAS_KM[0][1]
-```
+- **$N = 50$**: Número de cromosomas de las poblaciones.
+- **$M = 200$**: Cantidad de ciclos.
+- **Cromosomas**: Permutaciones de 23 números naturales del 1 al 23 donde cada gen es una ciudad.
+- Las frecuencias de crossover y de mutación quedan a criterio del grupo.
+- Se deberá usar **crossover cíclico**.
 
-### `comun/modelos_tsp.py`
+---
 
-Define las clases de dominio compartidas por todos los algoritmos.
+## Tareas para el informe
 
-#### `ProblemaTSP`
-
-Representa una instancia del problema.
-
-Atributos principales:
-
-- `ciudades`: nombres de las ciudades.
-- `distancias`: matriz de distancias.
-
-Metodos principales:
-
-- `cantidad_ciudades`: cantidad de ciudades.
-- `distancia(origen, destino)`: obtiene la distancia entre dos indices.
-- `nombre_ciudad(indice)`: obtiene el nombre de una ciudad.
-
-Esta clase debe utilizarse como entrada de los algoritmos heuristico y genetico.
-
-#### `RutaTSP`
-
-Representa una ruta cerrada y su costo.
-
-Atributos:
-
-- `recorrido`: tupla de indices de ciudades. La primera y la ultima ciudad deben coincidir.
-- `distancia_total`: distancia total de la ruta en kilometros.
-
-Metodo:
-
-- `nombres(problema)`: convierte los indices del recorrido en nombres de ciudades.
-
-Puede utilizarse como individuo, solucion candidata o resultado de cualquier algoritmo.
-
-#### `NodoBusqueda`
-
-Representa un estado parcial durante una busqueda.
-
-Atributos:
-
-- `recorrido`: ciudades visitadas hasta el momento.
-- `no_visitadas`: conjunto de ciudades pendientes.
-- `distancia_actual`: costo acumulado del recorrido parcial.
-
-Es util para Branch and Bound y puede servir como base para otras estrategias de exploracion.
-
-#### `EvaluadorRutas`
-
-Centraliza el calculo de distancias. Permite evaluar una ruta cerrada o un cromosoma genetico. El cromosoma no contiene la ciudad inicial: para el problema completo contiene las ciudades `1` a `23`, mientras que la ciudad `0` se agrega como origen y retorno al construir la ruta.
-
-Metodos principales:
-
-- `distancia_recorrido(recorrido)`: calcula una ruta cerrada valida.
-- `distancia_cromosoma(cromosoma, ciudad_inicial)`: evalua una permutacion genetica.
-- `crear_ruta(cromosoma, ciudad_inicial)`: convierte un cromosoma en `RutaTSP`.
-
-#### `IndividuoTSP`
-
-Representa un cromosoma como una tupla inmutable y opcionalmente guarda su distancia total. `evaluar()` devuelve el individuo evaluado, `ruta()` lo convierte en una ruta cerrada y `fitness` devuelve `1 / distancia_total`.
-
-### `branch_bound/branch_bound.py`
-
-Contiene el Branch and Bound secuencial.
-
-#### `BranchBound`
-
-Resuelve una instancia de `ProblemaTSP` de forma exacta. Utiliza una unica mejor solucion global y una cota inferior para podar ramas que no pueden mejorarla.
-
-Uso basico:
-
-```python
-from branch_bound.branch_bound import BranchBound
-from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-from comun.modelos_tsp import ProblemaTSP
-
-problema = ProblemaTSP(CAPITALES, DISTANCIAS_KM)
-resultado = BranchBound(problema).resolver()
-
-print(resultado.ruta.distancia_total)
-print(resultado.ruta.nombres(problema))
-```
-
-#### `ResultadoBranchBound`
-
-Contiene el resultado de la busqueda:
-
-- `ruta`: instancia de `RutaTSP` con la mejor ruta encontrada.
-- `nodos_explorados`: cantidad de nodos procesados.
-- `nodos_podados`: cantidad de nodos descartados mediante la cota inferior.
-
-### `branch_bound/branch_bound_paralelo.py`
-
-Contiene una version paralela de Branch and Bound. Divide el arbol en ramas iniciales y las procesa mediante procesos independientes.
-
-#### `BranchBoundParalelo`
-
-Recibe un `ProblemaTSP`, una ciudad inicial y opcionalmente la cantidad de procesos.
-
-```python
-from branch_bound_paralelo import BranchBoundParalelo
-
-resultado = BranchBoundParalelo(
-    problema,
-    ciudad_inicial=0,
-    cantidad_procesos=2,
-).resolver()
-```
-
-#### `ResultadoBusqueda`
-
-Tiene la misma informacion general que `ResultadoBranchBound`:
-
-- `ruta`.
-- `nodos_explorados`.
-- `nodos_podados`.
-
-La version secuencial suele ser mas conveniente para esta instancia debido al costo de crear procesos y a que los procesos paralelos no comparten la mejor cota global.
-
-## Clases recomendadas para los siguientes puntos
-
-Para una busqueda heuristica se recomienda reutilizar:
-
-- `ProblemaTSP` para acceder a ciudades y distancias.
-- `RutaTSP` para representar una solucion candidata.
-- `distancia_total` de `RutaTSP` como funcion de evaluacion.
-
-Para un algoritmo genetico se recomienda utilizar:
-
-- `RutaTSP` como representacion de un individuo.
-- `recorrido` como cromosoma o permutacion de ciudades.
-- `ProblemaTSP.distancia()` para calcular el costo de cada arista.
-- `ProblemaTSP` como contexto compartido por la poblacion.
-
-`NodoBusqueda` pertenece especificamente a las estrategias de exploracion de arbol y no es necesario para representar individuos de un algoritmo genetico.
-
-### `genetico/configuracion_genetica.py`
-
-Contiene `ConfiguracionGenetica`, una clase con los parametros del algoritmo genetico. Sus valores por defecto siguen las recomendaciones del enunciado:
-
-- `cantidad_cromosomas = 50`.
-- `cantidad_ciclos = 200`.
-- `frecuencia_crossover = 0.90`.
-- `frecuencia_mutacion = 0.10`.
-- `tamano_torneo = 3`.
-
-Las frecuencias y la semilla aleatoria pueden modificarse para comparar experimentos.
-
-### `genetico/poblacion_tsp.py`
-
-Contiene `PoblacionTSP`, responsable de generar, evaluar y administrar individuos.
-
-- `aleatoria(ciudades, cantidad, generador)`: crea la poblacion inicial.
-- `evaluar(evaluador, ciudad_inicial)`: calcula la distancia de cada individuo.
-- `mejor()`: devuelve el individuo con menor distancia.
-- `mejor_ruta(evaluador, ciudad_inicial)`: devuelve el mejor individuo como `RutaTSP`.
-- `conservar_elite(individuo)`: conserva una solucion elite reemplazando al peor individuo.
-
-### `genetico/operadores_geneticos.py`
-
-Contiene operadores que conservan la validez de las permutaciones.
-
-#### `SeleccionTorneo`
-
-Elige aleatoriamente varios candidatos y devuelve el de menor distancia. Es una estrategia de seleccion reutilizable para formar parejas de padres.
-
-#### `CrossoverCiclico`
-
-Implementa el crossover ciclico (Cycle Crossover, CX) recomendado por el enunciado. Recibe dos `IndividuoTSP` y devuelve dos hijos que contienen exactamente los mismos genes, sin repetidos ni faltantes.
-
-#### `MutacionIntercambio`
-
-Intercambia dos posiciones del cromosoma. Al operar sobre una permutacion, mantiene siempre una ruta valida.
-
-### `heuristica/heuristica_vecino.py`
-
-Contiene `VecinoMasCercano`, que implementa la heuristica solicitada: desde la ciudad actual visita la ciudad no visitada mas cercana y, despues de visitar todas, regresa a la ciudad inicial.
-
-```python
-from heuristica.heuristica_vecino import VecinoMasCercano
-
-heuristica = VecinoMasCercano(problema)
-ruta = heuristica.resolver(ciudad_inicial=0)
-mejor_de_todos = heuristica.resolver_todos_los_inicios()
-```
-
-`resolver()` corresponde al punto 2.a, porque permite elegir la ciudad de partida. `resolver_todos_los_inicios()` resulta util para el punto 2.b, porque ejecuta la heuristica desde cada capital y devuelve la mejor ruta heuristica encontrada.
-
-### `genetico/algoritmo_genetico_tsp.py`
-
-Contiene `AlgoritmoGeneticoTSP`, que sigue la segmentacion utilizada en TP1: el orquestador coordina la poblacion, la seleccion, el crossover, la mutacion y el elitismo.
-
-La configuracion por defecto se encuentra en `ConfiguracionGenetica`:
-
-- 50 cromosomas por poblacion.
-- 200 ciclos evolutivos.
-- Crossover ciclico (`CrossoverCiclico`).
-- Mutacion por intercambio (`MutacionIntercambio`).
-- Seleccion por torneo (`SeleccionTorneo`).
-
-El algoritmo devuelve `ResultadoAlgoritmoGenetico`, que contiene la mejor `RutaTSP`, el tiempo de ejecucion y el historial de cada generacion. Como es un metodo aproximado, no garantiza alcanzar el optimo; sus resultados deben compararse con Branch and Bound y la heuristica del vecino mas cercano.
-
-Ejemplo:
-
-```python
-from genetico.algoritmo_genetico_tsp import AlgoritmoGeneticoTSP
-from genetico.configuracion_genetica import ConfiguracionGenetica
-
-configuracion = ConfiguracionGenetica(semilla=42)
-resultado = AlgoritmoGeneticoTSP(problema, configuracion).resolver()
-```
-
-### `visualizacion/` y `gui_app.py`
-
-`visualizacion/` contiene las coordenadas de las capitales y el contorno de respaldo. `gui_app.py` contiene la interfaz Tkinter y utiliza `TkinterMapView` para mostrar OpenStreetMap.
-
-## Scripts disponibles
-
-- `scripts/ejercicio_1.py`: ejecuta el ejercicio 1, valida la ruta y muestra el informe.
-- `scripts/comparar_branch_bound.py`: compara los tiempos del Branch and Bound secuencial y paralelo en instancias reducidas.
-- `scripts/ejercicio_2c.py`: ejecuta el algoritmo genetico sobre las 24 capitales.
-
-La interfaz utiliza `TkinterMapView` para mostrar OpenStreetMap en la pestaña 2.a. Requiere conexion a Internet para descargar las teselas del mapa. El visor permite zoom y desplazamiento con el mouse, y la ruta heuristica se dibuja sobre las capitales.
-
-Para ejecutar el ejercicio sobre una instancia pequeña:
-
-```powershell
-.\env\Scripts\python.exe tp3/scripts/ejercicio_1.py --ciudades 8
-```
-
-Para ejecutar el problema completo:
-
-```powershell
-.\env\Scripts\python.exe tp3/scripts/ejercicio_1.py
-```
-
-Para iniciar la interfaz grafica:
-
-```powershell
-.\env\Scripts\python.exe tp3/src/gui_app.py
-```
+- Comparar los resultados obtenidos entre la resolución a través de heurísticas y con algoritmos genéticos a través de una conclusión que deberá anexarse al informe.
+- Agregar en el informe un apartado final denominado **«Aportes Prácticos del TSP»** donde se expliquen algunas aplicaciones en las que actualmente se use el problema del viajante. Tomar por lo menos dos y explicarlas.

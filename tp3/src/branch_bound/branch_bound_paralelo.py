@@ -1,28 +1,35 @@
-"""Resolucion exacta del TSP mediante Branch and Bound paralelo."""
+"""Resolución exacta del TSP mediante Branch and Bound paralelo."""
 
-from dataclasses import dataclass
 import multiprocessing
-from typing import Iterable
 
 try:
-    from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from .branch_bound import (
+        ResultadoBranchBound,
+        crear_problema_capitales,
+        expandir_nodo,
+        limite_inferior,
+    )
 except ImportError:
-    from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
-    from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+    from branch_bound.branch_bound import (
+        ResultadoBranchBound,
+        crear_problema_capitales,
+        expandir_nodo,
+        limite_inferior,
+    )
+
+from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
+from heuristica.heuristica_vecino import VecinoMasCercano
 
 
-@dataclass(frozen=True)
-class ResultadoBusqueda:
-    """Resultado del solver junto con estadisticas de poda."""
-
-    ruta: RutaTSP
-    nodos_explorados: int
-    nodos_podados: int
+def _resolver_rama_en_proceso(
+    tarea: tuple[ProblemaTSP, NodoBusqueda],
+) -> ResultadoBranchBound:
+    """Función de nivel superior ejecutable por cada proceso del pool."""
+    return BranchBoundParalelo._resolver_rama(tarea)
 
 
 class BranchBoundParalelo:
-    """Solver exacto que procesa en paralelo las ramas iniciales del TSP."""
+    """Solver exacto que distribuye las ramas iniciales del árbol en procesos paralelos."""
 
     def __init__(
         self,
@@ -30,17 +37,18 @@ class BranchBoundParalelo:
         ciudad_inicial: int = 0,
         cantidad_procesos: int | None = None,
     ) -> None:
+        """Inicializa el solver paralelo configurando la cantidad de procesos."""
         if not 0 <= ciudad_inicial < problema.cantidad_ciudades:
             raise ValueError("La ciudad inicial no existe en el problema.")
         self.problema = problema
         self.ciudad_inicial = ciudad_inicial
         self.cantidad_procesos = cantidad_procesos or multiprocessing.cpu_count()
 
-    def resolver(self) -> ResultadoBusqueda:
-        """Busca la ruta optima combinando el mejor resultado de cada rama."""
+    def resolver(self) -> ResultadoBranchBound:
+        """Busca la ruta óptima combinando el mejor resultado obtenido en cada subárbol."""
         if self.problema.cantidad_ciudades == 1:
             ruta = RutaTSP((self.ciudad_inicial, self.ciudad_inicial), 0)
-            return ResultadoBusqueda(ruta, nodos_explorados=1, nodos_podados=0)
+            return ResultadoBranchBound(ruta, nodos_explorados=1, nodos_podados=0)
 
         tareas = self._crear_tareas_iniciales()
         if self.cantidad_procesos == 1 or len(tareas) == 1:
@@ -50,9 +58,19 @@ class BranchBoundParalelo:
             with contexto.Pool(processes=self.cantidad_procesos) as pool:
                 resultados = pool.map(_resolver_rama_en_proceso, tareas)
 
-        return min(resultados, key=lambda resultado: resultado.ruta.distancia_total)
+        # Combinar métricas globales
+        mejor = min(resultados, key=lambda r: r.ruta.distancia_total)
+        total_explorados = sum(r.nodos_explorados for r in resultados)
+        total_podados = sum(r.nodos_podados for r in resultados)
+
+        return ResultadoBranchBound(
+            ruta=mejor.ruta,
+            nodos_explorados=total_explorados,
+            nodos_podados=total_podados,
+        )
 
     def _crear_tareas_iniciales(self) -> list[tuple[ProblemaTSP, NodoBusqueda]]:
+        """Genera los nodos de nivel 1 asignando cada ciudad no visitada como segundo paso."""
         no_visitadas = frozenset(
             indice
             for indice in range(self.problema.cantidad_ciudades)
@@ -73,9 +91,10 @@ class BranchBoundParalelo:
     @staticmethod
     def _resolver_rama(
         tarea: tuple[ProblemaTSP, NodoBusqueda],
-    ) -> ResultadoBusqueda:
+    ) -> ResultadoBranchBound:
+        """Explora una rama del árbol de búsqueda en un proceso independiente."""
         problema, nodo_inicial = tarea
-        mejor_ruta = _ruta_vecino_mas_cercano(problema, nodo_inicial.recorrido[0])
+        mejor_ruta = VecinoMasCercano(problema).resolver(nodo_inicial.recorrido[0])
         nodos_explorados = 0
         nodos_podados = 0
         pila = [nodo_inicial]
@@ -83,7 +102,7 @@ class BranchBoundParalelo:
         while pila:
             nodo = pila.pop()
             nodos_explorados += 1
-            limite = _limite_inferior(problema, nodo)
+            limite = limite_inferior(problema, nodo)
             if limite >= mejor_ruta.distancia_total:
                 nodos_podados += 1
                 continue
@@ -98,101 +117,21 @@ class BranchBoundParalelo:
                     )
                 continue
 
-            hijos = _expandir(nodo, problema)
-            hijos.sort(key=lambda hijo: _limite_inferior(problema, hijo), reverse=True)
+            hijos = expandir_nodo(nodo, problema)
+            hijos.sort(key=lambda hijo: limite_inferior(problema, hijo), reverse=True)
             pila.extend(hijos)
 
-        return ResultadoBusqueda(mejor_ruta, nodos_explorados, nodos_podados)
-
-
-def _resolver_rama_en_proceso(
-    tarea: tuple[ProblemaTSP, NodoBusqueda],
-) -> ResultadoBusqueda:
-    return BranchBoundParalelo._resolver_rama(tarea)
-
-
-def _expandir(nodo: NodoBusqueda, problema: ProblemaTSP) -> list[NodoBusqueda]:
-    return [
-        NodoBusqueda(
-            recorrido=nodo.recorrido + (siguiente,),
-            no_visitadas=nodo.no_visitadas - {siguiente},
-            distancia_actual=nodo.distancia_actual
-            + problema.distancia(nodo.recorrido[-1], siguiente),
+        return ResultadoBranchBound(
+            ruta=mejor_ruta,
+            nodos_explorados=nodos_explorados,
+            nodos_podados=nodos_podados,
         )
-        for siguiente in nodo.no_visitadas
-    ]
-
-
-def _limite_inferior(problema: ProblemaTSP, nodo: NodoBusqueda) -> int:
-    if not nodo.no_visitadas:
-        return nodo.distancia_actual + problema.distancia(
-            nodo.recorrido[-1], nodo.recorrido[0]
-        )
-
-    costo_mst = _costo_arbol_generador_minimo(problema, nodo.no_visitadas)
-    salida = min(
-        problema.distancia(nodo.recorrido[-1], ciudad)
-        for ciudad in nodo.no_visitadas
-    )
-    retorno = min(
-        problema.distancia(ciudad, nodo.recorrido[0]) for ciudad in nodo.no_visitadas
-    )
-    return nodo.distancia_actual + costo_mst + salida + retorno
-
-
-def _costo_arbol_generador_minimo(
-    problema: ProblemaTSP,
-    ciudades: Iterable[int],
-) -> int:
-    pendientes = set(ciudades)
-    if len(pendientes) < 2:
-        return 0
-
-    incluidos = {pendientes.pop()}
-    costo_total = 0
-    while pendientes:
-        distancia, ciudad = min(
-            (
-                (problema.distancia(incluida, candidata), candidata)
-                for incluida in incluidos
-                for candidata in pendientes
-            ),
-            key=lambda elemento: elemento[0],
-        )
-        incluidos.add(ciudad)
-        pendientes.remove(ciudad)
-        costo_total += distancia
-    return costo_total
-
-
-def _ruta_vecino_mas_cercano(problema: ProblemaTSP, ciudad_inicial: int) -> RutaTSP:
-    recorrido = [ciudad_inicial]
-    no_visitadas = set(range(problema.cantidad_ciudades)) - {ciudad_inicial}
-    distancia_total = 0
-
-    while no_visitadas:
-        siguiente = min(
-            no_visitadas,
-            key=lambda ciudad: problema.distancia(recorrido[-1], ciudad),
-        )
-        distancia_total += problema.distancia(recorrido[-1], siguiente)
-        recorrido.append(siguiente)
-        no_visitadas.remove(siguiente)
-
-    distancia_total += problema.distancia(recorrido[-1], ciudad_inicial)
-    recorrido.append(ciudad_inicial)
-    return RutaTSP(tuple(recorrido), distancia_total)
-
-
-def crear_problema_capitales() -> ProblemaTSP:
-    """Construye la instancia del enunciado con las capitales argentinas."""
-    return ProblemaTSP(CAPITALES, DISTANCIAS_KM)
 
 
 if __name__ == "__main__":
     solver = BranchBoundParalelo(crear_problema_capitales())
     resultado = solver.resolver()
-    print(f"Distancia optima: {resultado.ruta.distancia_total} km")
+    print(f"Distancia óptima: {resultado.ruta.distancia_total} km")
     print(" -> ".join(resultado.ruta.nombres(solver.problema)))
     print(f"Nodos explorados: {resultado.nodos_explorados}")
     print(f"Nodos podados: {resultado.nodos_podados}")

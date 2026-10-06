@@ -1,4 +1,4 @@
-"""Contorno simplificado de la Republica Argentina para visualizacion."""
+"""Contorno simplificado de la República Argentina para visualización esquemática."""
 
 # Puntos aproximados en formato (longitud, latitud), de norte a sur.
 CONTORNO_ARGENTINA: tuple[tuple[float, float], ...] = (

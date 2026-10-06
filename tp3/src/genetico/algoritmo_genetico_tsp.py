@@ -1,28 +1,22 @@
-"""Algoritmo genetico para resolver el TSP con cromosomas de permutacion."""
+"""Algoritmo genético para resolver el TSP con cromosomas de permutación."""
 
 from dataclasses import dataclass
 import random
 from time import perf_counter
 
-try:
-    from .configuracion_genetica import ConfiguracionGenetica
-    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
-    from .operadores_geneticos import (
-        CrossoverCiclico,
-        MutacionIntercambio,
-        SeleccionTorneo,
-    )
-    from .poblacion_tsp import PoblacionTSP
-except ImportError:
-    from configuracion_genetica import ConfiguracionGenetica
-    from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
-    from operadores_geneticos import CrossoverCiclico, MutacionIntercambio, SeleccionTorneo
-    from poblacion_tsp import PoblacionTSP
+from comun.modelos_tsp import EvaluadorRutas, IndividuoTSP, ProblemaTSP, RutaTSP
+from genetico.configuracion_genetica import ConfiguracionGenetica
+from genetico.operadores_geneticos import (
+    CrossoverCiclico,
+    MutacionIntercambio,
+    SeleccionTorneo,
+)
+from genetico.poblacion_tsp import PoblacionTSP
 
 
 @dataclass(frozen=True)
 class RegistroGeneracion:
-    """Mejor y promedio de una generacion."""
+    """Métricas de desempeño (mejor distancia y promedio) registradas en un ciclo evolutivo."""
 
     ciclo: int
     mejor_distancia: int
@@ -31,7 +25,7 @@ class RegistroGeneracion:
 
 @dataclass(frozen=True)
 class ResultadoAlgoritmoGenetico:
-    """Resultado final del algoritmo genetico."""
+    """Resultado final del algoritmo genético con la mejor ruta y su historial evolutivo."""
 
     ruta: RutaTSP
     segundos: float
@@ -39,7 +33,7 @@ class ResultadoAlgoritmoGenetico:
 
 
 class AlgoritmoGeneticoTSP:
-    """Orquesta poblacion, seleccion, crossover ciclico, mutacion y elitismo."""
+    """Orquesta la población, selección, crossover cíclico, mutación y elitismo para el TSP."""
 
     def __init__(
         self,
@@ -47,6 +41,7 @@ class AlgoritmoGeneticoTSP:
         configuracion: ConfiguracionGenetica | None = None,
         ciudad_inicial: int = 0,
     ) -> None:
+        """Inicializa el algoritmo genético con el problema y los hiperparámetros dados."""
         self.problema = problema
         self.configuracion = configuracion or ConfiguracionGenetica()
         self.ciudad_inicial = ciudad_inicial
@@ -57,7 +52,7 @@ class AlgoritmoGeneticoTSP:
         self.mutacion = MutacionIntercambio()
 
     def resolver(self) -> ResultadoAlgoritmoGenetico:
-        """Ejecuta la cantidad configurada de ciclos y devuelve la mejor ruta."""
+        """Ejecuta el ciclo evolutivo completo y retorna la mejor ruta hallada junto al historial."""
         inicio = perf_counter()
         ciudades = tuple(
             indice
@@ -82,7 +77,10 @@ class AlgoritmoGeneticoTSP:
                 if self.generador.random() < self.configuracion.frecuencia_crossover:
                     hijos = self.crossover.cruzar(padre_1, padre_2)
                 else:
-                    hijos = (IndividuoTSP(padre_1.cromosoma), IndividuoTSP(padre_2.cromosoma))
+                    hijos = (
+                        IndividuoTSP(padre_1.cromosoma),
+                        IndividuoTSP(padre_2.cromosoma),
+                    )
                 for hijo in hijos:
                     if len(nueva_poblacion) >= self.configuracion.cantidad_cromosomas:
                         break
@@ -93,7 +91,13 @@ class AlgoritmoGeneticoTSP:
             poblacion = PoblacionTSP(nueva_poblacion)
             poblacion.evaluar(self.evaluador, self.ciudad_inicial)
             mejor_actual = poblacion.mejor()
-            if (mejor_global.distancia_total is None or mejor_actual.distancia_total < mejor_global.distancia_total):
+            if (
+                mejor_global.distancia_total is None
+                or (
+                    mejor_actual.distancia_total is not None
+                    and mejor_actual.distancia_total < mejor_global.distancia_total
+                )
+            ):
                 mejor_global = mejor_actual
             historial.append(self._registrar_generacion(ciclo, poblacion))
 
@@ -104,7 +108,11 @@ class AlgoritmoGeneticoTSP:
         )
 
     @staticmethod
-    def _registrar_generacion(ciclo: int, poblacion: PoblacionTSP) -> RegistroGeneracion:
+    def _registrar_generacion(
+        ciclo: int,
+        poblacion: PoblacionTSP,
+    ) -> RegistroGeneracion:
+        """Calcula el mejor y promedio de aptitud de la población en la generación actual."""
         distancias = [
             individuo.distancia_total
             for individuo in poblacion.individuos

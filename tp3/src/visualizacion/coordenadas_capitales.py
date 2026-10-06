@@ -1,4 +1,4 @@
-"""Coordenadas geograficas aproximadas para dibujar las capitales argentinas."""
+"""Coordenadas geográficas aproximadas para representar las capitales argentinas."""
 
 # Valores en grados: longitud, latitud. Se usan para una visualizacion esquematica.
 COORDENADAS_CAPITALES: dict[str, tuple[float, float]] = {

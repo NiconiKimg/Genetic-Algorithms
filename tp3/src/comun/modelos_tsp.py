@@ -5,12 +5,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ProblemaTSP:
-    """Una instancia simetrica del problema del viajante."""
+    """Instancia simétrica del problema del viajante con matriz de distancias."""
 
     ciudades: tuple[str, ...]
     distancias: tuple[tuple[int, ...], ...]
 
     def __post_init__(self) -> None:
+        """Valida que la lista de ciudades y la matriz de distancias sean coherentes."""
         cantidad_ciudades = len(self.ciudades)
         if cantidad_ciudades == 0:
             raise ValueError("El problema debe tener al menos una ciudad.")
@@ -21,39 +22,44 @@ class ProblemaTSP:
 
     @property
     def cantidad_ciudades(self) -> int:
+        """Cantidad total de ciudades que componen el problema."""
         return len(self.ciudades)
 
     def distancia(self, origen: int, destino: int) -> int:
+        """Retorna la distancia en kilómetros entre los índices de dos ciudades."""
         return self.distancias[origen][destino]
 
     def nombre_ciudad(self, indice: int) -> str:
+        """Retorna el nombre asociado al índice de ciudad provisto."""
         return self.ciudades[indice]
 
     def validar_permutacion(self, recorrido: tuple[int, ...]) -> None:
-        """Verifica una permutacion de todas las ciudades del problema."""
+        """Verifica que una tupla sea una permutación válida de todas las ciudades."""
         esperado = set(range(self.cantidad_ciudades))
         if set(recorrido) != esperado or len(recorrido) != self.cantidad_ciudades:
-            raise ValueError("El recorrido no es una permutacion valida.")
+            raise ValueError("El recorrido no es una permutación válida.")
 
 
 @dataclass(frozen=True)
 class RutaTSP:
-    """Ruta cerrada y su distancia total."""
+    """Ruta cerrada que inicia y finaliza en la misma ciudad junto a su costo total."""
 
     recorrido: tuple[int, ...]
     distancia_total: int
 
     def nombres(self, problema: ProblemaTSP) -> tuple[str, ...]:
+        """Convierte los índices numéricos de la ruta en nombres de ciudades."""
         return tuple(problema.nombre_ciudad(indice) for indice in self.recorrido)
 
 
 @dataclass(frozen=True)
 class EvaluadorRutas:
-    """Calcula el costo de rutas y cromosomas para cualquier algoritmo."""
+    """Calcula el costo en kilómetros de rutas completas y cromosomas genéticos."""
 
     problema: ProblemaTSP
 
     def distancia_recorrido(self, recorrido: tuple[int, ...]) -> int:
+        """Calcula la distancia acumulada de un recorrido cerrado."""
         if len(recorrido) < 2:
             raise ValueError("El recorrido debe tener al menos dos ciudades.")
         if recorrido[0] != recorrido[-1]:
@@ -69,7 +75,7 @@ class EvaluadorRutas:
         cromosoma: tuple[int, ...],
         ciudad_inicial: int = 0,
     ) -> int:
-        """Evalua una permutacion sin origen, cerrandola sobre la ciudad inicial."""
+        """Evalúa una permutación sin origen, cerrándola sobre la ciudad inicial."""
         if not 0 <= ciudad_inicial < self.problema.cantidad_ciudades:
             raise ValueError("La ciudad inicial no existe en el problema.")
         ciudades_esperadas = set(range(self.problema.cantidad_ciudades)) - {
@@ -78,7 +84,7 @@ class EvaluadorRutas:
         if set(cromosoma) != ciudades_esperadas or len(cromosoma) != len(
             ciudades_esperadas
         ):
-            raise ValueError("El cromosoma no es una permutacion valida.")
+            raise ValueError("El cromosoma no es una permutación válida.")
         recorrido = (ciudad_inicial,) + cromosoma + (ciudad_inicial,)
         return self.distancia_recorrido(recorrido)
 
@@ -87,6 +93,7 @@ class EvaluadorRutas:
         cromosoma: tuple[int, ...],
         ciudad_inicial: int = 0,
     ) -> RutaTSP:
+        """Construye un objeto RutaTSP a partir de un cromosoma y la ciudad base."""
         distancia = self.distancia_cromosoma(cromosoma, ciudad_inicial)
         recorrido = (ciudad_inicial,) + cromosoma + (ciudad_inicial,)
         return RutaTSP(recorrido, distancia)
@@ -94,7 +101,7 @@ class EvaluadorRutas:
 
 @dataclass(frozen=True)
 class IndividuoTSP:
-    """Cromosoma TSP: permutacion de ciudades sin repetir el origen."""
+    """Cromosoma de permutación de ciudades (sin incluir la ciudad fija de origen)."""
 
     cromosoma: tuple[int, ...]
     distancia_total: int | None = None
@@ -104,6 +111,7 @@ class IndividuoTSP:
         evaluador: EvaluadorRutas,
         ciudad_inicial: int = 0,
     ) -> "IndividuoTSP":
+        """Calcula y asigna la distancia total asociada al cromosoma."""
         distancia = evaluador.distancia_cromosoma(self.cromosoma, ciudad_inicial)
         return IndividuoTSP(self.cromosoma, distancia)
 
@@ -112,18 +120,20 @@ class IndividuoTSP:
         evaluador: EvaluadorRutas,
         ciudad_inicial: int = 0,
     ) -> RutaTSP:
+        """Convierte el individuo en una instancia completa de RutaTSP."""
         return evaluador.crear_ruta(self.cromosoma, ciudad_inicial)
 
     @property
     def fitness(self) -> float:
+        """Aptitud relativa del individuo (inversa de la distancia total)."""
         if self.distancia_total is None:
             raise ValueError("El individuo debe evaluarse antes de consultar fitness.")
-        return 1 / self.distancia_total
+        return 1.0 / self.distancia_total if self.distancia_total > 0 else 0.0
 
 
 @dataclass(frozen=True)
 class NodoBusqueda:
-    """Estado parcial de una rama del arbol de busqueda."""
+    """Estado parcial de exploración en el árbol de búsqueda de Branch and Bound."""
 
     recorrido: tuple[int, ...]
     no_visitadas: frozenset[int]

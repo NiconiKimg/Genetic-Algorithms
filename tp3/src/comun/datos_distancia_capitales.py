@@ -63,7 +63,7 @@ INDICE_CAPITALES: dict[str, int] = {
 
 
 def validar_datos() -> None:
-    """Comprueba que la matriz sea cuadrada y simetrica."""
+    """Comprueba que la matriz sea cuadrada y simétrica."""
     cantidad_capitales = len(CAPITALES)
     if len(DISTANCIAS_KM) != cantidad_capitales:
         raise ValueError("La matriz no tiene una fila por capital.")
@@ -76,9 +76,9 @@ def validar_datos() -> None:
             raise ValueError("La diagonal debe contener ceros.")
         for columna in range(cantidad_capitales):
             if DISTANCIAS_KM[fila][columna] != DISTANCIAS_KM[columna][fila]:
-                raise ValueError("La matriz de distancias no es simetrica.")
+                raise ValueError("La matriz de distancias no es simétrica.")
 
 
 if __name__ == "__main__":
     validar_datos()
-    print(f"Datos validos: {len(CAPITALES)} capitales.")
+    print(f"Datos válidos: {len(CAPITALES)} capitales.")
