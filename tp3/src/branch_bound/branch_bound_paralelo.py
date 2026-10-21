@@ -1,6 +1,8 @@
 """Resolución exacta del TSP mediante Branch and Bound paralelo."""
 
+import ctypes
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 
 try:
     from .branch_bound import (
@@ -19,6 +21,14 @@ except ImportError:
 
 from comun.modelos_tsp import NodoBusqueda, ProblemaTSP, RutaTSP
 from heuristica.heuristica_vecino import VecinoMasCercano
+
+_cota_compartida_global: Synchronized | None = None
+
+
+def _inicializar_trabajador(cota: Synchronized) -> None:
+    """Configura la cota compartida en el espacio de memoria del proceso trabajador."""
+    global _cota_compartida_global
+    _cota_compartida_global = cota
 
 
 def _resolver_rama_en_proceso(
@@ -50,16 +60,32 @@ class BranchBoundParalelo:
             ruta = RutaTSP((self.ciudad_inicial, self.ciudad_inicial), 0)
             return ResultadoBranchBound(ruta, nodos_explorados=1, nodos_podados=0)
 
+        mejor_heuristica = VecinoMasCercano(self.problema).resolver(self.ciudad_inicial)
         tareas = self._crear_tareas_iniciales()
+        if not tareas:
+            return ResultadoBranchBound(mejor_heuristica, nodos_explorados=1, nodos_podados=0)
+
+        contexto = multiprocessing.get_context("spawn")
+        cota_compartida = contexto.Value(ctypes.c_int, mejor_heuristica.distancia_total)
+
         if self.cantidad_procesos == 1 or len(tareas) == 1:
+            _inicializar_trabajador(cota_compartida)
             resultados = [self._resolver_rama(tarea) for tarea in tareas]
         else:
-            contexto = multiprocessing.get_context("spawn")
-            with contexto.Pool(processes=self.cantidad_procesos) as pool:
+            with contexto.Pool(
+                processes=self.cantidad_procesos,
+                initializer=_inicializar_trabajador,
+                initargs=(cota_compartida,),
+            ) as pool:
                 resultados = pool.map(_resolver_rama_en_proceso, tareas)
 
         # Combinar métricas globales
-        mejor = min(resultados, key=lambda r: r.ruta.distancia_total)
+        candidatos = [r for r in resultados if r.ruta.distancia_total < float("inf")]
+        mejor = (
+            min(candidatos, key=lambda r: r.ruta.distancia_total)
+            if candidatos
+            else ResultadoBranchBound(mejor_heuristica, 0, 0)
+        )
         total_explorados = sum(r.nodos_explorados for r in resultados)
         total_podados = sum(r.nodos_podados for r in resultados)
 
@@ -70,7 +96,7 @@ class BranchBoundParalelo:
         )
 
     def _crear_tareas_iniciales(self) -> list[tuple[ProblemaTSP, NodoBusqueda]]:
-        """Genera los nodos de nivel 1 asignando cada ciudad no visitada como segundo paso."""
+        """Genera los nodos de nivel 1 ordenados ascendentemente por su límite inferior."""
         no_visitadas = frozenset(
             indice
             for indice in range(self.problema.cantidad_ciudades)
@@ -86,15 +112,22 @@ class BranchBoundParalelo:
                 ),
             )
             tareas.append((self.problema, nodo))
+        tareas.sort(key=lambda t: limite_inferior(t[0], t[1]))
         return tareas
 
     @staticmethod
     def _resolver_rama(
         tarea: tuple[ProblemaTSP, NodoBusqueda],
     ) -> ResultadoBranchBound:
-        """Explora una rama del árbol de búsqueda en un proceso independiente."""
+        """Explora una rama del árbol de búsqueda sincronizando la cota con el pool."""
+        global _cota_compartida_global
         problema, nodo_inicial = tarea
-        mejor_ruta = VecinoMasCercano(problema).resolver(nodo_inicial.recorrido[0])
+        mejor_distancia = (
+            _cota_compartida_global.value
+            if _cota_compartida_global is not None
+            else float("inf")
+        )
+        mejor_ruta: RutaTSP | None = None
         nodos_explorados = 0
         nodos_podados = 0
         pila = [nodo_inicial]
@@ -102,8 +135,13 @@ class BranchBoundParalelo:
         while pila:
             nodo = pila.pop()
             nodos_explorados += 1
+            cota_actual = (
+                _cota_compartida_global.value
+                if _cota_compartida_global is not None
+                else mejor_distancia
+            )
             limite = limite_inferior(problema, nodo)
-            if limite >= mejor_ruta.distancia_total:
+            if limite >= cota_actual:
                 nodos_podados += 1
                 continue
 
@@ -111,7 +149,12 @@ class BranchBoundParalelo:
                 distancia_total = nodo.distancia_actual + problema.distancia(
                     nodo.recorrido[-1], nodo.recorrido[0]
                 )
-                if distancia_total < mejor_ruta.distancia_total:
+                if _cota_compartida_global is not None and distancia_total < _cota_compartida_global.value:
+                    with _cota_compartida_global.get_lock():
+                        if distancia_total < _cota_compartida_global.value:
+                            _cota_compartida_global.value = distancia_total
+                if distancia_total <= mejor_distancia:
+                    mejor_distancia = distancia_total
                     mejor_ruta = RutaTSP(
                         nodo.recorrido + (nodo.recorrido[0],), distancia_total
                     )
@@ -121,8 +164,9 @@ class BranchBoundParalelo:
             hijos.sort(key=lambda hijo: limite_inferior(problema, hijo), reverse=True)
             pila.extend(hijos)
 
+        ruta_retorno = mejor_ruta if mejor_ruta is not None else RutaTSP((), float("inf"))
         return ResultadoBranchBound(
-            ruta=mejor_ruta,
+            ruta=ruta_retorno,
             nodos_explorados=nodos_explorados,
             nodos_podados=nodos_podados,
         )
