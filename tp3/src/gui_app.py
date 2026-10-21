@@ -1,6 +1,5 @@
-"""Interfaz Tkinter para ejecutar los ejercicios del TP3."""
+"""Interfaz Tkinter para ejecutar el ejercicio 1 del TP3."""
 
-from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import queue
 from pathlib import Path
@@ -9,6 +8,7 @@ import threading
 from time import perf_counter
 import tkinter as tk
 from tkinter import messagebox, ttk
+from tkintermapview import TkinterMapView
 
 RAIZ_TP3 = Path(__file__).resolve().parents[1]
 if str(RAIZ_TP3 / "src") not in sys.path:
@@ -21,18 +21,7 @@ from genetico.configuracion_genetica import ConfiguracionGenetica
 from heuristica.heuristica_vecino import VecinoMasCercano
 from comun.datos_distancia_capitales import CAPITALES, DISTANCIAS_KM
 from comun.modelos_tsp import ProblemaTSP, RutaTSP
-from interfaz.componentes import (
-    ItemNavegacion,
-    PanelMapa,
-    SliderValor,
-    TablaRecorrido,
-    Tarjeta,
-    TarjetaAccion,
-    TarjetaMetrica,
-    crear_control_segmentado,
-    formatear_entero,
-)
-from interfaz.tema import Fuentes, Paleta, aplicar_barra_titulo_oscura, configurar_estilos
+from visualizacion.coordenadas_capitales import COORDENADAS_CAPITALES
 
 
 @dataclass(frozen=True)
@@ -49,11 +38,21 @@ class ResultadoGUI:
 
 @dataclass(frozen=True)
 class ResultadoHeuristicoGUI:
-    """Datos de la ruta heuristica para la pestaña 2.a."""
+    """Datos de la ruta heurística para la pestaña 2.a."""
 
     ciudad_inicial: int
     ruta: RutaTSP
     segundos: float
+
+
+@dataclass(frozen=True)
+class ResultadoHeuristicoTodosGUI:
+    """Datos de la mejor ruta heurística evaluando todos los inicios para la pestaña 2.b."""
+
+    mejor_ciudad_inicial: int
+    ruta: RutaTSP
+    segundos: float
+    ranking: tuple[tuple[str, int], ...]
 
 
 @dataclass(frozen=True)
@@ -119,22 +118,40 @@ def ejecutar_heuristica(ciudad_inicial: int) -> ResultadoHeuristicoGUI:
     )
 
 
+def ejecutar_heuristica_todos() -> ResultadoHeuristicoTodosGUI:
+    """Ejecuta la heurística desde cada una de las 24 capitales y halla el mejor recorrido."""
+    problema = crear_problema(len(CAPITALES))
+    inicio = perf_counter()
+    heuristica = VecinoMasCercano(problema)
+    resultados: list[tuple[int, str, int, RutaTSP]] = []
+    for idx, capital in enumerate(CAPITALES):
+        ruta = heuristica.resolver(idx)
+        resultados.append((idx, capital, ruta.distancia_total, ruta))
+    resultados.sort(key=lambda item: item[2])
+    mejor_idx, mejor_capital, mejor_dist, mejor_ruta = resultados[0]
+    segundos = perf_counter() - inicio
+    return ResultadoHeuristicoTodosGUI(
+        mejor_ciudad_inicial=mejor_idx,
+        ruta=mejor_ruta,
+        segundos=segundos,
+        ranking=tuple((cap, dist) for _, cap, dist, _ in resultados),
+    )
+
+
 def ejecutar_genetico(
     ciudad_inicial: int,
     cantidad_cromosomas: int,
     cantidad_ciclos: int,
     frecuencia_crossover: float,
     frecuencia_mutacion: float,
-    semilla: int | None,
 ) -> ResultadoGeneticoGUI:
-    """Ejecuta el algoritmo genetico con los parametros seleccionados."""
+    """Ejecuta el algoritmo genético con los parámetros seleccionados."""
     problema = crear_problema(len(CAPITALES))
     configuracion = ConfiguracionGenetica(
         cantidad_cromosomas=cantidad_cromosomas,
         cantidad_ciclos=cantidad_ciclos,
         frecuencia_crossover=frecuencia_crossover,
         frecuencia_mutacion=frecuencia_mutacion,
-        semilla=semilla,
     )
     inicio = perf_counter()
     resultado = AlgoritmoGeneticoTSP(
@@ -153,253 +170,23 @@ def ejecutar_genetico(
     )
 
 
-# ---------------------------------------------------------------------------
-# Utilidades de presentacion
-# ---------------------------------------------------------------------------
-
-def formatear_segundos(segundos: float) -> tuple[str, str]:
-    """Devuelve (valor, unidad) legible para un tiempo de ejecucion."""
-    if segundos < 1e-3:
-        return f"{segundos * 1e6:.0f}", "µs"
-    if segundos < 1:
-        return f"{segundos * 1e3:.1f}", "ms"
-    if segundos < 120:
-        return f"{segundos:.2f}", "s"
-    return f"{segundos / 60:.1f}", "min"
-
-
-def tramos_de(ruta: RutaTSP, problema: ProblemaTSP) -> list[int]:
-    return [
-        problema.distancia(origen, destino)
-        for origen, destino in zip(ruta.recorrido, ruta.recorrido[1:])
-    ]
-
-
-def texto_recorrido(ruta: RutaTSP, problema: ProblemaTSP) -> str:
-    return "\n".join(
-        f"{indice + 1:2}. {nombre}" for indice, nombre in enumerate(ruta.nombres(problema))
-    )
-
-
-@dataclass(frozen=True)
-class EspecMetrica:
-    clave: str
-    titulo: str
-    unidad: str
-    color: str
-
-
-# ---------------------------------------------------------------------------
-# Vista generica de un ejercicio
-# ---------------------------------------------------------------------------
-
-class VistaEjercicio(ttk.Frame):
-    """Layout comun: parametros a la izquierda, metricas, mapa y recorrido."""
-
-    def __init__(
-        self,
-        master: tk.Misc,
-        insignia: str,
-        titulo: str,
-        subtitulo: str,
-        etiqueta: str,
-        color: str,
-        metricas: Sequence[EspecMetrica],
-        texto_boton: str,
-        comando: Callable[[], None],
-    ) -> None:
-        super().__init__(master, padding=(32, 26, 32, 18))
-        self.comando = comando
-        self.resumen = ""
-        self.ultima_distancia: int | None = None
-        self.columnconfigure(1, weight=1)
-        self.rowconfigure(1, weight=1)
-
-        # Encabezado
-        encabezado = ttk.Frame(self)
-        encabezado.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
-        fila = ttk.Frame(encabezado)
-        fila.pack(fill="x")
-        tk.Label(
-            fila, text=insignia, background=color, foreground=Paleta.FONDO,
-            font=(Fuentes.MONO, 11, "bold"), width=4, pady=4,
-        ).pack(side="left")
-        ttk.Label(fila, text=titulo, style="H1.TLabel").pack(side="left", padx=(14, 0))
-        tk.Label(
-            fila, text=etiqueta, background=Paleta.SUPERFICIE_2, foreground=color,
-            font=(Fuentes.BASE, 8, "bold"), padx=9, pady=3,
-        ).pack(side="left", padx=(14, 0))
-        ttk.Label(encabezado, text=subtitulo, style="Subtitulo.TLabel").pack(
-            anchor="w", pady=(8, 0)
-        )
-
-        # Panel de parametros
-        self.panel = Tarjeta(self, padding=20)
-        self.panel.grid(row=1, column=0, sticky="nsw", padx=(0, 20))
-        cuerpo = self.panel.cuerpo
-        ttk.Label(cuerpo, text="Parámetros", style="TarjetaTitulo.TLabel").pack(anchor="w")
-        ttk.Label(
-            cuerpo, text="Configurá la ejecución y presioná resolver.",
-            style="TarjetaAyuda.TLabel",
-        ).pack(anchor="w", pady=(2, 14))
-        self.campos = tk.Frame(cuerpo, background=Paleta.SUPERFICIE, width=280)
-        self.campos.pack(fill="x")
-
-        acciones = tk.Frame(cuerpo, background=Paleta.SUPERFICIE)
-        acciones.pack(side="bottom", fill="x")
-        self.boton = ttk.Button(
-            acciones, text=f"▶  {texto_boton}", style="Acento.TButton", command=comando
-        )
-        self.boton.pack(fill="x")
-        self.progreso = ttk.Progressbar(
-            acciones, mode="indeterminate", style="Acento.Horizontal.TProgressbar"
-        )
-        self.texto_estado = ttk.Label(
-            acciones, text="Listo · Ctrl+Enter para ejecutar", style="TarjetaAyuda.TLabel"
-        )
-        self.texto_estado.pack(anchor="w", pady=(10, 0))
-        self.boton_copiar = ttk.Button(
-            acciones, text="⧉  Copiar resumen", command=self._copiar, state="disabled"
-        )
-        self.boton_copiar.pack(fill="x", pady=(12, 0))
-
-        # Zona de resultados
-        derecha = ttk.Frame(self)
-        derecha.grid(row=1, column=1, sticky="nsew")
-        derecha.columnconfigure(0, weight=1)
-        derecha.rowconfigure(1, weight=1)
-
-        fila_metricas = ttk.Frame(derecha)
-        fila_metricas.grid(row=0, column=0, sticky="ew", pady=(0, 16))
-        self.metricas: dict[str, TarjetaMetrica] = {}
-        for columna, espec in enumerate(metricas):
-            fila_metricas.columnconfigure(columna, weight=1, uniform="metricas")
-            tarjeta = TarjetaMetrica(fila_metricas, espec.titulo, espec.unidad, espec.color)
-            tarjeta.grid(
-                row=0, column=columna, sticky="nsew",
-                padx=(0 if columna == 0 else 8, 0),
-            )
-            self.metricas[espec.clave] = tarjeta
-
-        divisor = ttk.Panedwindow(derecha, orient="horizontal")
-        divisor.grid(row=1, column=0, sticky="nsew")
-        self.mapa = PanelMapa(divisor)
-        self.tabla = TablaRecorrido(divisor)
-        divisor.add(self.mapa, weight=3)
-        divisor.add(self.tabla, weight=1)
-
-    # -- ayudas para construir el formulario ---------------------------------
-    def agregar_campo(
-        self,
-        texto: str,
-        fabrica: Callable[[tk.Misc], tk.Widget],
-        ayuda: str | None = None,
-    ) -> tk.Widget:
-        contenedor = tk.Frame(self.campos, background=Paleta.SUPERFICIE)
-        contenedor.pack(fill="x", pady=(0, 14))
-        ttk.Label(contenedor, text=texto, style="TarjetaCampo.TLabel").pack(anchor="w")
-        widget = fabrica(contenedor)
-        widget.pack(fill="x", pady=(5, 0))
-        if ayuda:
-            ttk.Label(
-                contenedor, text=ayuda, style="TarjetaAyuda.TLabel", wraplength=270,
-                justify="left",
-            ).pack(anchor="w", pady=(4, 0))
-        return widget
-
-    def agregar_widget(self, fabrica: Callable[[tk.Misc], tk.Widget]) -> tk.Widget:
-        widget = fabrica(self.campos)
-        widget.pack(fill="x", pady=(0, 14))
-        return widget
-
-    # -- estado ---------------------------------------------------------------
-    def establecer_ocupado(self, ocupado: bool) -> None:
-        if ocupado:
-            self.boton.configure(state="disabled", text="⏳  Ejecutando…")
-            self.progreso.pack(fill="x", pady=(10, 0), before=self.texto_estado)
-            self.progreso.start(12)
-        else:
-            self.progreso.stop()
-            self.progreso.pack_forget()
-            self.boton.configure(state="normal", text=self._texto_boton_original())
-
-    def _texto_boton_original(self) -> str:
-        return getattr(self, "_texto_boton", None) or self.boton.cget("text")
-
-    def guardar_texto_boton(self) -> None:
-        self._texto_boton = self.boton.cget("text")
-
-    def estado(self, texto: str) -> None:
-        self.texto_estado.configure(text=texto)
-
-    def mostrar_resultado(
-        self,
-        ruta: RutaTSP,
-        problema: ProblemaTSP,
-        valores: dict[str, tuple[str, str]],
-        resumen: str,
-    ) -> None:
-        distancia = ruta.distancia_total
-        for clave, (valor, detalle) in valores.items():
-            self.metricas[clave].mostrar(valor, detalle)
-        if "distancia" in self.metricas:
-            detalle, color = "Primera ejecución", None
-            if self.ultima_distancia is not None:
-                delta = distancia - self.ultima_distancia
-                if delta < 0:
-                    detalle, color = f"▼ {formatear_entero(-delta)} km vs. anterior", Paleta.TURQUESA
-                elif delta > 0:
-                    detalle, color = f"▲ {formatear_entero(delta)} km vs. anterior", Paleta.ROJO
-                else:
-                    detalle = "= igual a la ejecución anterior"
-            self.metricas["distancia"].mostrar(formatear_entero(distancia), detalle, color)
-        self.ultima_distancia = distancia
-        self.mapa.mostrar_ruta(ruta, problema)
-        self.tabla.mostrar(ruta, problema)
-        self.resumen = resumen
-        self.boton_copiar.configure(state="normal")
-
-    def _copiar(self) -> None:
-        if not self.resumen:
-            return
-        self.clipboard_clear()
-        self.clipboard_append(self.resumen)
-        self.boton_copiar.configure(text="✓  Copiado al portapapeles")
-        self.after(1600, lambda: self.boton_copiar.configure(text="⧉  Copiar resumen"))
-
-
-# ---------------------------------------------------------------------------
-# Aplicacion principal
-# ---------------------------------------------------------------------------
-
 class AplicacionTSP:
-    """Ventana principal y navegacion de la aplicacion del TP3."""
-
-    ALGORITMO_SECUENCIAL = "Branch and Bound secuencial"
-    ALGORITMO_PARALELO = "Branch and Bound paralelo"
+    """Ventana principal y navegación de la aplicación del TP3."""
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("TP3 · Problema del Viajante")
-        self._configurar_ventana()
-        configurar_estilos(root)
+        self.root.title("TP3 - Problema del Viajante")
+        self.root.geometry("820x620")
+        self.root.minsize(700, 500)
+        self.resultados: queue.Queue[tuple[str, object]] = queue.Queue()
+        self.zoom_2a = 1.0
         self._crear_variables()
+        self._crear_estilos()
         self._crear_interfaz()
-        self._crear_atajos()
-        self.mostrar("inicio")
-        aplicar_barra_titulo_oscura(root)
-
-    # -- configuracion --------------------------------------------------------
-    def _configurar_ventana(self) -> None:
-        ancho, alto = 1400, 880
-        x = max((self.root.winfo_screenwidth() - ancho) // 2, 0)
-        y = max((self.root.winfo_screenheight() - alto) // 2 - 30, 0)
-        self.root.geometry(f"{ancho}x{alto}+{x}+{y}")
-        self.root.minsize(1180, 740)
 
     def _crear_variables(self) -> None:
-        self.cantidad_ciudades = tk.IntVar(value=min(12, len(CAPITALES)))
-        self.algoritmo = tk.StringVar(value=self.ALGORITMO_SECUENCIAL)
+        self.cantidad_ciudades = tk.IntVar(value=10)
+        self.algoritmo = tk.StringVar(value="Branch and Bound secuencial")
         self.cantidad_procesos = tk.IntVar(value=2)
         self.ciudad_inicial_heuristica = tk.StringVar(value=CAPITALES[0])
         self.ciudad_inicial_genetico = tk.StringVar(value=CAPITALES[0])
@@ -407,365 +194,769 @@ class AplicacionTSP:
         self.cantidad_ciclos = tk.IntVar(value=200)
         self.frecuencia_crossover = tk.DoubleVar(value=0.90)
         self.frecuencia_mutacion = tk.DoubleVar(value=0.10)
-        self.semilla_genetica = tk.StringVar(value="42")
-        self.estado = tk.StringVar(value="Listo.")
+        self.estado = tk.StringVar(value="Listo para ejecutar el ejercicio 1.")
 
-    def _crear_atajos(self) -> None:
-        self.root.bind_all("<Control-Return>", lambda _e: self._ejecutar_actual())
-        self.root.bind_all("<F5>", lambda _e: self._ejecutar_actual())
-        for numero, clave in enumerate(("inicio", "ej1", "ej2a", "ej2c"), start=1):
-            self.root.bind_all(f"<Control-Key-{numero}>", lambda _e, c=clave: self.mostrar(c))
+    def _crear_estilos(self) -> None:
+        estilo = ttk.Style()
+        try:
+            estilo.theme_use("vista")
+        except tk.TclError:
+            pass
+        estilo.configure("Titulo.TLabel", font=("Segoe UI", 18, "bold"))
+        estilo.configure("Subtitulo.TLabel", font=("Segoe UI", 11))
+        estilo.configure("Resultado.TLabel", font=("Consolas", 10))
 
-    # -- estructura -----------------------------------------------------------
     def _crear_interfaz(self) -> None:
-        self.root.columnconfigure(1, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        self._crear_barra_lateral()
+        contenedor = ttk.Frame(self.root, padding=20)
+        contenedor.pack(fill="both", expand=True)
 
-        contenido = ttk.Frame(self.root)
-        contenido.grid(row=0, column=1, sticky="nsew")
-        contenido.columnconfigure(0, weight=1)
-        contenido.rowconfigure(0, weight=1)
-
-        self.paginas: dict[str, ttk.Frame] = {
-            "inicio": self._crear_inicio(contenido),
-            "ej1": self._crear_ejercicio_1(contenido),
-            "ej2a": self._crear_ejercicio_2a(contenido),
-            "ej2c": self._crear_ejercicio_2c(contenido),
-        }
-        for pagina in self.paginas.values():
-            pagina.grid(row=0, column=0, sticky="nsew")
-
-        self._crear_barra_estado(contenido)
-
-    def _crear_barra_lateral(self) -> None:
-        barra = tk.Frame(self.root, background=Paleta.BARRA_LATERAL, width=260)
-        barra.grid(row=0, column=0, sticky="ns")
-        barra.grid_propagate(False)
-        barra.pack_propagate(False)
-        tk.Frame(self.root, background=Paleta.BORDE, width=1).grid(
-            row=0, column=0, sticky="nse"
-        )
-
-        marca = tk.Frame(barra, background=Paleta.BARRA_LATERAL)
-        marca.pack(fill="x", padx=20, pady=(24, 28))
-        logo = tk.Canvas(
-            marca, width=40, height=40, background=Paleta.BARRA_LATERAL,
-            highlightthickness=0,
-        )
-        logo.pack(side="left")
-        logo.create_rectangle(0, 0, 40, 40, fill=Paleta.ACENTO, outline="")
-        puntos = ((10, 28), (17, 12), (27, 18), (31, 30), (10, 28))
-        logo.create_line(*[c for p in puntos for c in p], fill="#ffffff", width=2)
-        for px, py in puntos[:-1]:
-            logo.create_oval(px - 3, py - 3, px + 3, py + 3, fill=Paleta.TURQUESA, outline="#ffffff")
-        textos = tk.Frame(marca, background=Paleta.BARRA_LATERAL)
-        textos.pack(side="left", padx=(12, 0))
-        tk.Label(
-            textos, text="TSP Lab", background=Paleta.BARRA_LATERAL,
-            foreground=Paleta.TEXTO, font=(Fuentes.TITULO, 14),
+        encabezado = ttk.Frame(contenedor)
+        encabezado.pack(fill="x", pady=(0, 18))
+        ttk.Label(
+            encabezado,
+            text="Problema del Viajante",
+            style="Titulo.TLabel",
         ).pack(anchor="w")
-        tk.Label(
-            textos, text="TP3 · Algoritmos Genéticos", background=Paleta.BARRA_LATERAL,
-            foreground=Paleta.TEXTO_TENUE, font=(Fuentes.BASE, 9),
-        ).pack(anchor="w")
+        ttk.Label(
+            encabezado,
+            text="Resolución exacta de rutas entre capitales argentinas",
+            style="Subtitulo.TLabel",
+        ).pack(anchor="w", pady=(4, 0))
 
-        def seccion(texto: str) -> None:
-            tk.Label(
-                barra, text=texto, background=Paleta.BARRA_LATERAL,
-                foreground=Paleta.TEXTO_TENUE, font=(Fuentes.BASE, 8, "bold"),
-            ).pack(anchor="w", padx=22, pady=(10, 6))
+        self.pestanas = ttk.Notebook(contenedor)
+        self.pestanas.pack(fill="both", expand=True)
+        self.pestana_inicio = ttk.Frame(self.pestanas, padding=24)
+        self.pestana_ejercicio_1 = ttk.Frame(self.pestanas, padding=20)
+        self.pestana_ejercicio_2a = ttk.Frame(self.pestanas, padding=20)
+        self.pestana_ejercicio_2b = ttk.Frame(self.pestanas, padding=20)
+        self.pestana_ejercicio_2c = ttk.Frame(self.pestanas, padding=20)
+        self.pestanas.add(self.pestana_inicio, text="Inicio")
+        self.pestanas.add(self.pestana_ejercicio_1, text="Ejercicio 1")
+        self.pestanas.add(self.pestana_ejercicio_2a, text="Ejercicio 2.a")
+        self.pestanas.add(self.pestana_ejercicio_2b, text="Ejercicio 2.b")
+        self.pestanas.add(self.pestana_ejercicio_2c, text="Ejercicio 2.c")
+        self._crear_inicio()
+        self._crear_ejercicio_1()
+        self._crear_ejercicio_2a()
+        self._crear_ejercicio_2b()
+        self._crear_ejercicio_2c()
 
-        self.navegacion: dict[str, ItemNavegacion] = {}
-        seccion("GENERAL")
-        self._item_nav(barra, "inicio", "⌂", "Inicio", "Resumen del trabajo")
-        seccion("EJERCICIOS")
-        self._item_nav(barra, "ej1", "1", "Ejercicio 1", "Branch and Bound")
-        self._item_nav(barra, "ej2a", "2a", "Ejercicio 2.a", "Vecino más cercano")
-        self._item_nav(barra, "ej2c", "2c", "Ejercicio 2.c", "Algoritmo genético")
+        ttk.Label(contenedor, textvariable=self.estado).pack(anchor="w", pady=(12, 0))
 
-        pie = tk.Frame(barra, background=Paleta.BARRA_LATERAL)
-        pie.pack(side="bottom", fill="x", padx=22, pady=20)
-        for texto in (
-            f"{len(CAPITALES)} capitales argentinas",
-            "Mapas © OpenStreetMap · CARTO",
-        ):
-            tk.Label(
-                pie, text=texto, background=Paleta.BARRA_LATERAL,
-                foreground=Paleta.TEXTO_TENUE, font=(Fuentes.BASE, 8),
-            ).pack(anchor="w")
+    def _crear_inicio(self) -> None:
+        marco = ttk.Frame(self.pestana_inicio)
+        marco.pack(expand=True)
+        ttk.Label(
+            marco,
+            text="Ejercicios disponibles",
+            style="Titulo.TLabel",
+        ).pack(pady=(30, 10))
+        ttk.Label(
+            marco,
+            text="Seleccione un ejercicio para comenzar.",
+            style="Subtitulo.TLabel",
+        ).pack(pady=(0, 24))
+        ttk.Button(
+            marco,
+            text="Ejercicio 1 - Branch and Bound",
+            command=self.mostrar_ejercicio_1,
+        ).pack(ipadx=18, ipady=8)
+        ttk.Button(
+            marco,
+            text="Ejercicio 2.a - Vecino más cercano",
+            command=self.mostrar_ejercicio_2a,
+        ).pack(ipadx=18, ipady=8, pady=(10, 0))
+        ttk.Button(
+            marco,
+            text="Ejercicio 2.b - Mejor origen heurístico",
+            command=self.mostrar_ejercicio_2b,
+        ).pack(ipadx=18, ipady=8, pady=(10, 0))
+        ttk.Button(
+            marco,
+            text="Ejercicio 2.c - Algoritmo genético",
+            command=self.mostrar_ejercicio_2c,
+        ).pack(ipadx=18, ipady=8, pady=(10, 0))
 
-    def _item_nav(self, barra: tk.Misc, clave: str, insignia: str, titulo: str, subtitulo: str) -> None:
-        item = ItemNavegacion(barra, insignia, titulo, subtitulo, lambda: self.mostrar(clave))
-        item.pack(fill="x", padx=(0, 10), pady=1)
-        self.navegacion[clave] = item
+    def _crear_ejercicio_1(self) -> None:
+        self.pestana_ejercicio_1.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_1.rowconfigure(5, weight=1)
 
-    def _crear_barra_estado(self, contenido: ttk.Frame) -> None:
-        barra = tk.Frame(contenido, background=Paleta.BARRA_LATERAL, height=30)
-        barra.grid(row=1, column=0, sticky="ew")
-        tk.Frame(barra, background=Paleta.BORDE, height=1).pack(side="top", fill="x")
-        self.indicador_estado = tk.Label(
-            barra, text="●", background=Paleta.BARRA_LATERAL,
-            foreground=Paleta.TURQUESA, font=(Fuentes.BASE, 9),
+        ttk.Label(
+            self.pestana_ejercicio_1,
+            text="Resolver ejercicio 1",
+            style="Titulo.TLabel",
+        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 18))
+
+        ttk.Label(
+            self.pestana_ejercicio_1,
+            text="Cantidad de ciudades:",
+        ).grid(row=1, column=0, sticky="w", pady=6)
+        ciudades = ttk.Spinbox(
+            self.pestana_ejercicio_1,
+            from_=1,
+            to=len(CAPITALES),
+            textvariable=self.cantidad_ciudades,
+            width=8,
         )
-        self.indicador_estado.pack(side="left", padx=(18, 6), pady=5)
-        tk.Label(
-            barra, textvariable=self.estado, background=Paleta.BARRA_LATERAL,
-            foreground=Paleta.TEXTO_SUAVE, font=(Fuentes.BASE, 9),
-        ).pack(side="left")
-        tk.Label(
-            barra, text="Ctrl+1…4 navegar  ·  Ctrl+Enter / F5 ejecutar",
-            background=Paleta.BARRA_LATERAL, foreground=Paleta.TEXTO_TENUE,
-            font=(Fuentes.BASE, 9),
-        ).pack(side="right", padx=18)
+        ciudades.grid(row=1, column=1, sticky="w", padx=(12, 0), pady=6)
 
-    def mostrar(self, clave: str) -> None:
-        self.pagina_actual = clave
-        self.paginas[clave].tkraise()
-        for nombre, item in self.navegacion.items():
-            item.establecer_activo(nombre == clave)
+        ttk.Label(
+            self.pestana_ejercicio_1,
+            text="Algoritmo:",
+        ).grid(row=2, column=0, sticky="w", pady=6)
+        algoritmos = ttk.Combobox(
+            self.pestana_ejercicio_1,
+            textvariable=self.algoritmo,
+            values=(
+                "Branch and Bound secuencial",
+                "Branch and Bound paralelo",
+            ),
+            state="readonly",
+            width=32,
+        )
+        algoritmos.grid(row=2, column=1, sticky="w", padx=(12, 0), pady=6)
 
-    # Compatibilidad con la API anterior
+        ttk.Label(
+            self.pestana_ejercicio_1,
+            text="Procesos (paralelo):",
+        ).grid(row=3, column=0, sticky="w", pady=6)
+        procesos = ttk.Spinbox(
+            self.pestana_ejercicio_1,
+            from_=1,
+            to=16,
+            textvariable=self.cantidad_procesos,
+            width=8,
+        )
+        procesos.grid(row=3, column=1, sticky="w", padx=(12, 0), pady=6)
+
+        self.boton_resolver = ttk.Button(
+            self.pestana_ejercicio_1,
+            text="Resolver",
+            command=self.resolver_ejercicio_1,
+        )
+        self.boton_resolver.grid(row=1, column=2, rowspan=3, padx=(24, 0), ipadx=18, ipady=8)
+
+        self.progreso_1 = ttk.Progressbar(self.pestana_ejercicio_1, mode="indeterminate")
+
+        self.salida = tk.Text(
+            self.pestana_ejercicio_1,
+            height=18,
+            wrap="word",
+            state="disabled",
+            font=("Consolas", 10),
+        )
+        self.salida.grid(row=5, column=0, columnspan=3, sticky="nsew", pady=(16, 0))
+
     def mostrar_ejercicio_1(self) -> None:
-        self.mostrar("ej1")
+        self.pestanas.select(self.pestana_ejercicio_1)
 
     def mostrar_ejercicio_2a(self) -> None:
-        self.mostrar("ej2a")
+        self.pestanas.select(self.pestana_ejercicio_2a)
+
+    def mostrar_ejercicio_2b(self) -> None:
+        self.pestanas.select(self.pestana_ejercicio_2b)
 
     def mostrar_ejercicio_2c(self) -> None:
-        self.mostrar("ej2c")
+        self.pestanas.select(self.pestana_ejercicio_2c)
 
-    def _ejecutar_actual(self) -> None:
-        acciones = {
-            "ej1": self.resolver_ejercicio_1,
-            "ej2a": self.resolver_ejercicio_2a,
-            "ej2c": self.resolver_ejercicio_2c,
-        }
-        accion = acciones.get(getattr(self, "pagina_actual", ""))
-        vista = self.paginas.get(getattr(self, "pagina_actual", ""))
-        if accion and isinstance(vista, VistaEjercicio) and str(vista.boton.cget("state")) != "disabled":
-            accion()
+    def _crear_ejercicio_2a(self) -> None:
+        self.pestana_ejercicio_2a.columnconfigure(0, weight=0, minsize=330)
+        self.pestana_ejercicio_2a.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_2a.rowconfigure(0, weight=1)
 
-    # -- pagina de inicio -----------------------------------------------------
-    def _crear_inicio(self, master: tk.Misc) -> ttk.Frame:
-        pagina = ttk.Frame(master, padding=(48, 44, 48, 24))
-        pagina.columnconfigure(0, weight=1)
+        panel_izquierdo = tk.Frame(
+            self.pestana_ejercicio_2a,
+            borderwidth=1,
+            relief="solid",
+            background="#f7f9f8",
+        )
+        panel_izquierdo.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+        panel_izquierdo.grid_columnconfigure(0, weight=1)
+        panel_izquierdo.grid_rowconfigure(6, weight=1)
 
-        tk.Label(
-            pagina, text="TP3  ·  PROBLEMA DEL VIAJANTE", background=Paleta.ACENTO_SUAVE,
-            foreground="#c9bdff", font=(Fuentes.BASE, 8, "bold"), padx=10, pady=4,
-        ).grid(row=0, column=0, sticky="w")
         ttk.Label(
-            pagina, text="Recorré las capitales argentinas\ncon la ruta más corta",
-            style="Hero.TLabel", justify="left",
-        ).grid(row=1, column=0, sticky="w", pady=(16, 10))
+            panel_izquierdo,
+            text="Ejercicio 2.a",
+            style="Titulo.TLabel",
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(20, 4))
         ttk.Label(
-            pagina,
-            text=(
-                "Compará un método exacto, una heurística constructiva y una "
-                "metaheurística evolutiva sobre la misma matriz de distancias."
-            ),
+            panel_izquierdo,
+            text="Vecino más cercano",
             style="Subtitulo.TLabel",
-        ).grid(row=2, column=0, sticky="w")
-
-        estadisticas = ttk.Frame(pagina)
-        estadisticas.grid(row=3, column=0, sticky="w", pady=(28, 34))
-        distancia_maxima = max(max(fila) for fila in DISTANCIAS_KM)
-        for indice, (valor, texto) in enumerate((
-            (str(len(CAPITALES)), "capitales"),
-            ("3", "enfoques"),
-            (formatear_entero(distancia_maxima), "km tramo máximo"),
-        )):
-            bloque = ttk.Frame(estadisticas)
-            bloque.pack(side="left", padx=(0 if indice == 0 else 40, 0))
-            tk.Label(
-                bloque, text=valor, background=Paleta.FONDO, foreground=Paleta.TEXTO,
-                font=(Fuentes.TITULO, 22),
-            ).pack(anchor="w")
-            tk.Label(
-                bloque, text=texto, background=Paleta.FONDO,
-                foreground=Paleta.TEXTO_TENUE, font=(Fuentes.BASE, 9),
-            ).pack(anchor="w")
-
-        tarjetas = ttk.Frame(pagina)
-        tarjetas.grid(row=4, column=0, sticky="ew")
-        datos = (
-            ("01", "Branch and Bound", "Búsqueda exacta con poda por cota. Versión secuencial y paralela con múltiples procesos.", "EXACTO", Paleta.ACENTO, "ej1"),
-            ("2a", "Vecino más cercano", "Heurística constructiva: desde la capital elegida, siempre visita la más cercana no visitada.", "HEURÍSTICA", Paleta.CELESTE, "ej2a"),
-            ("2c", "Algoritmo genético", "Población de recorridos que evoluciona con selección, crossover cíclico y mutación.", "METAHEURÍSTICA", Paleta.TURQUESA, "ej2c"),
+        ).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 18))
+        ttk.Label(
+            panel_izquierdo,
+            text="Ciudad de partida:",
+        ).grid(row=2, column=0, sticky="w", padx=18, pady=(0, 6))
+        ttk.Combobox(
+            panel_izquierdo,
+            textvariable=self.ciudad_inicial_heuristica,
+            values=CAPITALES,
+            state="readonly",
+        ).grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 12))
+        self.boton_resolver_2a = ttk.Button(
+            panel_izquierdo,
+            text="Resolver heurística",
+            command=self.resolver_ejercicio_2a,
         )
-        for columna, (insignia, titulo, descripcion, etiqueta, color, clave) in enumerate(datos):
-            tarjetas.columnconfigure(columna, weight=1, uniform="tarjetas")
-            TarjetaAccion(
-                tarjetas, insignia, titulo, descripcion, etiqueta, color,
-                lambda c=clave: self.mostrar(c),
-            ).grid(row=0, column=columna, sticky="nsew", padx=(0 if columna == 0 else 16, 0))
-        return pagina
+        self.boton_resolver_2a.grid(row=4, column=0, sticky="ew", padx=18, pady=(0, 10))
 
-    # -- ejercicio 1 ----------------------------------------------------------
-    def _crear_ejercicio_1(self, master: tk.Misc) -> VistaEjercicio:
-        vista = VistaEjercicio(
-            master, "01", "Branch and Bound",
-            "Resolución exacta: explora el árbol de recorridos podando las ramas que superan la mejor cota.",
-            "EXACTO", Paleta.ACENTO,
+        self.progreso_2a = ttk.Progressbar(panel_izquierdo, mode="indeterminate")
+
+        self.salida_2a = tk.Text(
+            panel_izquierdo,
+            width=36,
+            wrap="word",
+            state="disabled",
+            borderwidth=0,
+            background="#f7f9f8",
+            font=("Consolas", 9),
+        )
+        self.salida_2a.grid(row=6, column=0, sticky="nsew", padx=18, pady=(0, 18))
+
+        visor = ttk.Frame(self.pestana_ejercicio_2a)
+        visor.grid(row=0, column=1, sticky="nsew")
+        visor.columnconfigure(0, weight=1)
+        visor.rowconfigure(0, weight=1)
+        self.mapa_2a = TkinterMapView(
+            visor,
+            corner_radius=0,
+        )
+        self.mapa_2a.grid(row=0, column=0, sticky="nsew")
+        self.mapa_2a.bind("<MouseWheel>", self._actualizar_marcadores_despues_zoom)
+        controles_mapa = ttk.Frame(visor)
+        controles_mapa.grid(row=1, column=0, sticky="e", pady=(8, 0))
+        ttk.Button(
+            controles_mapa,
+            text="-",
+            width=3,
+            command=self._alejar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="100%",
+            command=self._centrar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="+",
+            width=3,
+            command=self._acercar_mapa,
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            controles_mapa,
+            text="Guardar imagen",
+            command=self._guardar_mapa,
+        ).pack(side="left", padx=(10, 2))
+        self._dibujar_mapa_base()
+
+    def _crear_ejercicio_2b(self) -> None:
+        self.pestana_ejercicio_2b.columnconfigure(0, weight=0, minsize=350)
+        self.pestana_ejercicio_2b.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_2b.rowconfigure(0, weight=1)
+
+        panel = tk.Frame(
+            self.pestana_ejercicio_2b,
+            borderwidth=1,
+            relief="solid",
+            background="#f7f9f8",
+        )
+        panel.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+        panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(5, weight=1)
+
+        ttk.Label(
+            panel,
+            text="Ejercicio 2.b",
+            style="Titulo.TLabel",
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(20, 4))
+        ttk.Label(
+            panel,
+            text="Recorrido mínimo (todos los orígenes)",
+            style="Subtitulo.TLabel",
+        ).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
+        ttk.Label(
+            panel,
+            text="Evalúa la heurística partiendo desde cada una\nde las 24 capitales para hallar la mejor ruta.",
+            wraplength=310,
+        ).grid(row=2, column=0, sticky="w", padx=18, pady=(0, 14))
+
+        self.boton_resolver_2b = ttk.Button(
+            panel,
+            text="Evaluar todas las capitales",
+            command=self.resolver_ejercicio_2b,
+        )
+        self.boton_resolver_2b.grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 10))
+
+        self.progreso_2b = ttk.Progressbar(panel, mode="indeterminate")
+
+        self.salida_2b = tk.Text(
+            panel,
+            width=38,
+            wrap="word",
+            state="disabled",
+            borderwidth=0,
+            background="#f7f9f8",
+            font=("Consolas", 9),
+        )
+        self.salida_2b.grid(row=5, column=0, sticky="nsew", padx=18, pady=(0, 18))
+
+        visor = ttk.Frame(self.pestana_ejercicio_2b)
+        visor.grid(row=0, column=1, sticky="nsew")
+        visor.columnconfigure(0, weight=1)
+        visor.rowconfigure(0, weight=1)
+        self.mapa_2b = TkinterMapView(visor, corner_radius=0)
+        self.mapa_2b.grid(row=0, column=0, sticky="nsew")
+        self.mapa_2b.set_position(-35.5, -64.5)
+        self.mapa_2b.set_zoom(4)
+        self._agregar_marcadores_en(self.mapa_2b)
+
+    def _crear_ejercicio_2c(self) -> None:
+        self.pestana_ejercicio_2c.columnconfigure(0, weight=0, minsize=350)
+        self.pestana_ejercicio_2c.columnconfigure(1, weight=1)
+        self.pestana_ejercicio_2c.rowconfigure(0, weight=1)
+
+        panel = tk.Frame(
+            self.pestana_ejercicio_2c,
+            borderwidth=1,
+            relief="solid",
+            background="#f7f9f8",
+        )
+        panel.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+
+        # Encabezado fijo
+        encabezado = ttk.Frame(panel)
+        encabezado.pack(fill="x", padx=18, pady=(16, 10))
+        ttk.Label(encabezado, text="Ejercicio 2.c", style="Titulo.TLabel").pack(anchor="w")
+        ttk.Label(encabezado, text="Algoritmo genético", style="Subtitulo.TLabel").pack(anchor="w", pady=(2, 0))
+
+        # 1. Sub-frame del formulario de configuración
+        self.frame_formulario_2c = ttk.Frame(panel)
+        self.frame_formulario_2c.pack(fill="both", expand=True, padx=18, pady=(0, 16))
+
+        ttk.Label(self.frame_formulario_2c, text="Ciudad de partida:").pack(anchor="w", pady=(0, 2))
+        ttk.Combobox(
+            self.frame_formulario_2c,
+            textvariable=self.ciudad_inicial_genetico,
+            values=CAPITALES,
+            state="readonly",
+        ).pack(fill="x", pady=(0, 8))
+
+        parametros = (
+            ("Cantidad de cromosomas (N):", self.cantidad_cromosomas, 50, 500, 1),
+            ("Cantidad de ciclos (M):", self.cantidad_ciclos, 1, 2000, 1),
+            ("Frecuencia de crossover (0 a 1):", self.frecuencia_crossover, 0.0, 1.0, 0.01),
+            ("Frecuencia de mutación (0 a 1):", self.frecuencia_mutacion, 0.0, 1.0, 0.01),
+        )
+
+        for texto, variable, minimo, maximo, inc in parametros:
+            ttk.Label(self.frame_formulario_2c, text=texto).pack(anchor="w", pady=(3, 1))
+            ttk.Spinbox(
+                self.frame_formulario_2c,
+                from_=minimo,
+                to=maximo,
+                increment=inc,
+                textvariable=variable,
+            ).pack(fill="x", pady=(0, 6))
+
+        self.boton_resolver_2c = ttk.Button(
+            self.frame_formulario_2c,
+            text="Resolver algoritmo genético",
+            command=self.resolver_ejercicio_2c,
+        )
+        self.boton_resolver_2c.pack(fill="x", pady=(12, 0))
+
+        self.progreso_2c = ttk.Progressbar(self.frame_formulario_2c, mode="indeterminate")
+
+        # 2. Sub-frame del resultado (inicialmente oculto)
+        self.frame_resultado_2c = ttk.Frame(panel)
+
+        ttk.Label(
+            self.frame_resultado_2c,
+            text="Resultado de la ejecución:",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 6))
+
+        self.salida_2c = tk.Text(
+            self.frame_resultado_2c,
+            width=36,
+            height=16,
+            wrap="word",
+            state="disabled",
+            borderwidth=1,
+            relief="solid",
+            background="#ffffff",
+            font=("Consolas", 9),
+        )
+        self.salida_2c.pack(fill="both", expand=True, pady=(0, 12))
+
+        self.boton_reintentar_2c = ttk.Button(
+            self.frame_resultado_2c,
+            text="Volver a configurar / Reintentar",
+            command=self._mostrar_formulario_2c,
+        )
+        self.boton_reintentar_2c.pack(fill="x", pady=(0, 6))
+
+        # Visor de mapa en la columna derecha
+        visor = ttk.Frame(self.pestana_ejercicio_2c)
+        visor.grid(row=0, column=1, sticky="nsew")
+        visor.columnconfigure(0, weight=1)
+        visor.rowconfigure(0, weight=1)
+        self.mapa_2c = TkinterMapView(visor, corner_radius=0)
+        self.mapa_2c.grid(row=0, column=0, sticky="nsew")
+        self.mapa_2c.set_position(-35.5, -64.5)
+        self.mapa_2c.set_zoom(4)
+        self._agregar_marcadores_en(self.mapa_2c)
+
+    def resolver_ejercicio_2a(self) -> None:
+        ciudad = self.ciudad_inicial_heuristica.get()
+        if ciudad not in CAPITALES:
+            messagebox.showerror("Datos inválidos", "Seleccione una capital válida.")
+            return
+        self.boton_resolver_2a.configure(state="disabled")
+        self.progreso_2a.grid(row=5, column=0, sticky="ew", padx=18, pady=(0, 10))
+        self.progreso_2a.start(10)
+        self.estado.set("Ejecutando la heurística del vecino más cercano...")
+        self._escribir_salida_2a("Calculando ruta heurística...\n")
+        threading.Thread(
+            target=self._trabajar_2a,
+            args=(CAPITALES.index(ciudad),),
+            daemon=True,
+        ).start()
+        self.root.after(100, self._consultar_resultado_2a)
+
+    def resolver_ejercicio_2c(self) -> None:
+        try:
+            cantidad = self.cantidad_cromosomas.get()
+            ciclos = self.cantidad_ciclos.get()
+            crossover = self.frecuencia_crossover.get()
+            mutacion = self.frecuencia_mutacion.get()
+            ConfiguracionGenetica(cantidad, ciclos, crossover, mutacion)
+        except (tk.TclError, ValueError) as error:
+            messagebox.showerror("Datos inválidos", str(error))
+            return
+        self.boton_resolver_2c.configure(state="disabled")
+        self.progreso_2c.pack(fill="x", pady=(10, 0))
+        self.progreso_2c.start(10)
+        self.estado.set("Ejecutando el algoritmo genético...")
+        self._escribir_salida_2c("Calculando resultado...\n")
+        parametros = (
+            CAPITALES.index(self.ciudad_inicial_genetico.get()),
+            cantidad,
+            ciclos,
+            crossover,
+            mutacion,
+        )
+        threading.Thread(target=self._trabajar_2c, args=parametros, daemon=True).start()
+        self.root.after(100, self._consultar_resultado_2c)
+
+    def _trabajar_2c(self, *parametros: object) -> None:
+        try:
+            resultado = ejecutar_genetico(*parametros)
+            self.resultados.put(("genetico", resultado))
+        except Exception as error:
+            self.resultados.put(("error_2c", error))
+
+    def _consultar_resultado_2c(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado_2c)
+            return
+        self.progreso_2c.stop()
+        self.progreso_2c.pack_forget()
+        self.boton_resolver_2c.configure(state="normal")
+        if tipo == "error_2c":
+            self.estado.set("El algoritmo genético terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+        if tipo != "genetico" or not isinstance(valor, ResultadoGeneticoGUI):
+            self.resultados.put((tipo, valor))
+            self.root.after(100, self._consultar_resultado_2c)
+            return
+        self.estado.set("Ejecución genética finalizada.")
+        self._mostrar_resultado_2c(valor)
+
+    def _mostrar_resultado_2c(self, resultado: ResultadoGeneticoGUI) -> None:
+        self.frame_formulario_2c.pack_forget()
+        self.frame_resultado_2c.pack(fill="both", expand=True, padx=18, pady=(0, 16))
+        problema = crear_problema(len(CAPITALES))
+        ciudades_nombres = resultado.ruta.nombres(problema)
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}" + (" (Regreso al inicio)" if indice == len(ciudades_nombres) - 1 else "")
+            for indice, nombre in enumerate(ciudades_nombres)
+        )
+        texto = "\n".join((
+            "RESUMEN",
+            "Algoritmo: Algoritmo genético",
+            f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
+            f"Cromosomas: {resultado.cantidad_cromosomas}",
+            f"Ciclos: {resultado.cantidad_ciclos}",
+            f"Crossover cíclico: {resultado.frecuencia_crossover:.0%}",
+            f"Mutación: {resultado.frecuencia_mutacion:.0%}",
+            f"Distancia total: {resultado.ruta.distancia_total} km",
+            f"Tiempo de ejecución: {resultado.segundos:.6f} s",
+            "",
+            "MEJOR RECORRIDO",
+            nombres,
+        ))
+        self._escribir_salida_2c(texto)
+        self._dibujar_ruta_en(self.mapa_2c, resultado.ruta, problema)
+
+    def _mostrar_formulario_2c(self) -> None:
+        self.frame_resultado_2c.pack_forget()
+        self.frame_formulario_2c.pack(fill="both", expand=True, padx=18, pady=(0, 16))
+        self.boton_resolver_2c.configure(state="normal")
+
+    def _escribir_salida_2c(self, texto: str) -> None:
+        self.salida_2c.configure(state="normal")
+        self.salida_2c.delete("1.0", tk.END)
+        self.salida_2c.insert(tk.END, texto)
+        self.salida_2c.configure(state="disabled")
+
+    def _trabajar_2a(self, ciudad_inicial: int) -> None:
+        try:
+            resultado = ejecutar_heuristica(ciudad_inicial)
+            self.resultados.put(("heuristica", resultado))
+        except Exception as error:
+            self.resultados.put(("error_2a", error))
+
+    def _consultar_resultado_2a(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado_2a)
+            return
+        self.progreso_2a.stop()
+        self.progreso_2a.grid_remove()
+        self.boton_resolver_2a.configure(state="normal")
+        if tipo == "error_2a":
+            self.estado.set("La ejecución heurística terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+        if tipo != "heuristica" or not isinstance(valor, ResultadoHeuristicoGUI):
+            self.resultados.put((tipo, valor))
+            self.root.after(100, self._consultar_resultado_2a)
+            return
+        self.estado.set("Ejecución heurística finalizada.")
+        self._mostrar_resultado_2a(valor)
+
+    def _mostrar_resultado_2a(self, resultado: ResultadoHeuristicoGUI) -> None:
+        problema = crear_problema(len(CAPITALES))
+        ciudades_nombres = resultado.ruta.nombres(problema)
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}" + (" (Regreso al inicio)" if indice == len(ciudades_nombres) - 1 else "")
+            for indice, nombre in enumerate(ciudades_nombres)
+        )
+        texto = "\n".join(
             (
-                EspecMetrica("distancia", "Distancia total", "km", Paleta.ACENTO),
-                EspecMetrica("tiempo", "Tiempo", "s", Paleta.CELESTE),
-                EspecMetrica("explorados", "Nodos explorados", "", Paleta.TURQUESA),
-                EspecMetrica("podados", "Nodos podados", "", Paleta.AMBAR),
-            ),
-            "Resolver", self.resolver_ejercicio_1,
+                "RESUMEN",
+                "Algoritmo: Vecino más cercano",
+                f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
+                f"Distancia total: {resultado.ruta.distancia_total} km",
+                f"Tiempo de ejecución: {resultado.segundos:.6f} s",
+                "",
+                "RECORRIDO COMPLETO",
+                nombres,
+            )
         )
-        vista.agregar_campo(
-            "Cantidad de ciudades",
-            lambda m: ttk.Spinbox(m, from_=2, to=len(CAPITALES), textvariable=self.cantidad_ciudades),
-            "Se usan las primeras N capitales. El tiempo crece de forma exponencial.",
-        )
-        vista.agregar_campo(
-            "Algoritmo",
-            lambda m: crear_control_segmentado(
-                m, self.algoritmo,
-                ((self.ALGORITMO_SECUENCIAL, "Secuencial"), (self.ALGORITMO_PARALELO, "Paralelo")),
-                self._actualizar_procesos,
-            ),
-        )
-        self.spin_procesos = vista.agregar_campo(
-            "Procesos",
-            lambda m: ttk.Spinbox(m, from_=1, to=16, textvariable=self.cantidad_procesos),
-            "Solo aplica a la versión paralela.",
-        )
-        vista.guardar_texto_boton()
-        self.vista_1 = vista
-        self._actualizar_procesos()
-        return vista
+        self._escribir_salida_2a(texto)
+        self._dibujar_ruta(resultado.ruta, problema)
 
-    def _actualizar_procesos(self) -> None:
-        paralelo = self.algoritmo.get() == self.ALGORITMO_PARALELO
-        self.spin_procesos.configure(state="normal" if paralelo else "disabled")
+    def _escribir_salida_2a(self, texto: str) -> None:
+        self.salida_2a.configure(state="normal")
+        self.salida_2a.delete("1.0", tk.END)
+        self.salida_2a.insert(tk.END, texto)
+        self.salida_2a.configure(state="disabled")
 
-    # -- ejercicio 2.a --------------------------------------------------------
-    def _crear_ejercicio_2a(self, master: tk.Misc) -> VistaEjercicio:
-        vista = VistaEjercicio(
-            master, "2a", "Vecino más cercano",
-            "Heurística constructiva: parte de una capital y siempre avanza hacia la más cercana sin visitar.",
-            "HEURÍSTICA", Paleta.CELESTE,
+    def resolver_ejercicio_2b(self) -> None:
+        self.boton_resolver_2b.configure(state="disabled")
+        self.progreso_2b.grid(row=4, column=0, sticky="ew", padx=18, pady=(0, 10))
+        self.progreso_2b.start(10)
+        self.estado.set("Evaluando vecino más cercano en las 24 capitales...")
+        self._escribir_salida_2b("Calculando mejor origen heurístico...\n")
+        threading.Thread(target=self._trabajar_2b, daemon=True).start()
+        self.root.after(100, self._consultar_resultado_2b)
+
+    def _trabajar_2b(self) -> None:
+        try:
+            resultado = ejecutar_heuristica_todos()
+            self.resultados.put(("heuristica_todos", resultado))
+        except Exception as error:
+            self.resultados.put(("error_2b", error))
+
+    def _consultar_resultado_2b(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado_2b)
+            return
+        self.progreso_2b.stop()
+        self.progreso_2b.grid_remove()
+        self.boton_resolver_2b.configure(state="normal")
+        if tipo == "error_2b":
+            self.estado.set("La evaluación terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+        if tipo != "heuristica_todos" or not isinstance(valor, ResultadoHeuristicoTodosGUI):
+            self.resultados.put((tipo, valor))
+            self.root.after(100, self._consultar_resultado_2b)
+            return
+        self.estado.set("Evaluación de todas las capitales completada.")
+        self._mostrar_resultado_2b(valor)
+
+    def _mostrar_resultado_2b(self, resultado: ResultadoHeuristicoTodosGUI) -> None:
+        problema = crear_problema(len(CAPITALES))
+        ciudades_nombres = resultado.ruta.nombres(problema)
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}" + (" (Regreso al inicio)" if indice == len(ciudades_nombres) - 1 else "")
+            for indice, nombre in enumerate(ciudades_nombres)
+        )
+        ranking_texto = "\n".join(
+            f"  {idx + 1:2}. {cap:<28} {dist:>6,d} km"
+            for idx, (cap, dist) in enumerate(resultado.ranking[:10])
+        )
+        texto = "\n".join(
             (
-                EspecMetrica("distancia", "Distancia total", "km", Paleta.CELESTE),
-                EspecMetrica("tiempo", "Tiempo", "s", Paleta.ACENTO),
-                EspecMetrica("maximo", "Tramo más largo", "km", Paleta.AMBAR),
-                EspecMetrica("promedio", "Tramo promedio", "km", Paleta.TURQUESA),
-            ),
-            "Resolver heurística", self.resolver_ejercicio_2a,
+                "RESUMEN",
+                f"Mejor partida: {CAPITALES[resultado.mejor_ciudad_inicial]}",
+                f"Distancia mínima: {resultado.ruta.distancia_total} km",
+                f"Tiempo de cómputo: {resultado.segundos:.6f} s",
+                "",
+                "TOP 10 CAPITALES DE INICIO",
+                ranking_texto,
+                "",
+                "RECORRIDO COMPLETO",
+                nombres,
+            )
         )
-        vista.agregar_campo(
-            "Ciudad de partida",
-            lambda m: ttk.Combobox(
-                m, textvariable=self.ciudad_inicial_heuristica, values=CAPITALES, state="readonly"
-            ),
-            "Se recorren las 24 capitales y se vuelve al punto de partida.",
-        )
-        vista.guardar_texto_boton()
-        self.vista_2a = vista
-        return vista
+        self._escribir_salida_2b(texto)
+        self._dibujar_ruta_en(self.mapa_2b, resultado.ruta, problema)
 
-    # -- ejercicio 2.c --------------------------------------------------------
-    def _crear_ejercicio_2c(self, master: tk.Misc) -> VistaEjercicio:
-        vista = VistaEjercicio(
-            master, "2c", "Algoritmo genético",
-            "Metaheurística evolutiva con selección por torneo, crossover cíclico y mutación.",
-            "METAHEURÍSTICA", Paleta.TURQUESA,
+    def _escribir_salida_2b(self, texto: str) -> None:
+        self.salida_2b.configure(state="normal")
+        self.salida_2b.delete("1.0", tk.END)
+        self.salida_2b.insert(tk.END, texto)
+        self.salida_2b.configure(state="disabled")
+
+    def _dibujar_mapa_base(self) -> None:
+        self.mapa_2a.set_position(-35.5, -64.5)
+        self.mapa_2a.set_zoom(4)
+        self._limpiar_capas_mapa()
+        self._agregar_marcadores()
+
+    def _limpiar_capas_mapa(self) -> None:
+        self.mapa_2a.delete_all_marker()
+        self.mapa_2a.delete_all_path()
+
+    def _agregar_marcadores(self) -> None:
+        self._agregar_marcadores_en(self.mapa_2a)
+
+    def _agregar_marcadores_en(self, mapa: TkinterMapView) -> None:
+        if not hasattr(self, "icono_capital"):
+            self.icono_capital = tk.PhotoImage(width=7, height=7)
+            self.icono_capital.put("#2c3e50", to=(0, 0, 7, 7))
+            self.icono_inicio = tk.PhotoImage(width=11, height=11)
+            self.icono_inicio.put("#27ae60", to=(0, 0, 11, 11))
+        mostrar_nombres = mapa.zoom >= 6
+        for nombre in CAPITALES:
+            longitud, latitud = COORDENADAS_CAPITALES[nombre]
+            mapa.set_marker(
+                latitud,
+                longitud,
+                text=nombre if mostrar_nombres else None,
+                icon=self.icono_capital,
+                icon_anchor="center",
+                font=("Segoe UI", 9, "bold"),
+            )
+
+    def _centrar_mapa(self) -> None:
+        self.mapa_2a.set_position(-35.5, -64.5)
+        self.mapa_2a.set_zoom(4)
+
+    def _acercar_mapa(self) -> None:
+        self.mapa_2a.set_zoom(self.mapa_2a.zoom + 1)
+        self._actualizar_marcadores()
+
+    def _alejar_mapa(self) -> None:
+        self.mapa_2a.set_zoom(self.mapa_2a.zoom - 1)
+        self._actualizar_marcadores()
+
+    def _actualizar_marcadores_despues_zoom(self, _evento: tk.Event) -> None:
+        self.root.after(100, self._actualizar_marcadores)
+
+    def _actualizar_marcadores(self) -> None:
+        ruta = getattr(self, "ruta_mapa_2a", None)
+        self._limpiar_capas_mapa()
+        self._agregar_marcadores()
+        if ruta is not None:
+            posiciones = [
+                (
+                    COORDENADAS_CAPITALES[self.problema_mapa_2a.nombre_ciudad(indice)][1],
+                    COORDENADAS_CAPITALES[self.problema_mapa_2a.nombre_ciudad(indice)][0],
+                )
+                for indice in ruta.recorrido
+            ]
+            self.mapa_2a.set_path(posiciones, color="#1a5276", width=3)
+            inicio = posiciones[0]
+            nombre_inicio = self.problema_mapa_2a.nombre_ciudad(ruta.recorrido[0])
+            self.mapa_2a.set_marker(
+                inicio[0],
+                inicio[1],
+                text=f"Partida / Llegada: {nombre_inicio}",
+                icon=self.icono_inicio,
+                icon_anchor="center",
+                font=("Segoe UI", 9, "bold"),
+            )
+
+    def _guardar_mapa(self) -> None:
+        if not hasattr(self, "ruta_mapa_2a"):
+            messagebox.showinfo("Mapa", "Primero debe resolver el ejercicio 2.a.")
+            return
+        messagebox.showinfo(
+            "Mapa interactivo",
+            "El mapa es interactivo: puede hacer zoom y desplazarse con el mouse.\n"
+            "Para conservarlo, use una captura de pantalla del visor.",
+        )
+
+    def _dibujar_ruta(self, ruta: RutaTSP, problema: ProblemaTSP) -> None:
+        self.ruta_mapa_2a = ruta
+        self.problema_mapa_2a = problema
+        self._dibujar_ruta_en(self.mapa_2a, ruta, problema)
+
+    def _dibujar_ruta_en(self, mapa: TkinterMapView, ruta: RutaTSP, problema: ProblemaTSP) -> None:
+        mapa.delete_all_marker()
+        mapa.delete_all_path()
+        self._agregar_marcadores_en(mapa)
+        posiciones = [
             (
-                EspecMetrica("distancia", "Mejor distancia", "km", Paleta.TURQUESA),
-                EspecMetrica("tiempo", "Tiempo", "s", Paleta.ACENTO),
-                EspecMetrica("maximo", "Tramo más largo", "km", Paleta.AMBAR),
-                EspecMetrica("evaluaciones", "Población × ciclos", "", Paleta.CELESTE),
-            ),
-            "Resolver algoritmo genético", self.resolver_ejercicio_2c,
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][1],
+                COORDENADAS_CAPITALES[problema.nombre_ciudad(indice)][0],
+            )
+            for indice in ruta.recorrido
+        ]
+        mapa.set_path(posiciones, color="#1a5276", width=3)
+        inicio = posiciones[0]
+        nombre_inicio = problema.nombre_ciudad(ruta.recorrido[0])
+        mapa.set_marker(
+            inicio[0],
+            inicio[1],
+            text=f"Partida / Llegada: {nombre_inicio}",
+            icon=self.icono_inicio,
+            icon_anchor="center",
+            font=("Segoe UI", 9, "bold"),
         )
-        vista.agregar_campo(
-            "Ciudad de partida",
-            lambda m: ttk.Combobox(
-                m, textvariable=self.ciudad_inicial_genetico, values=CAPITALES, state="readonly"
-            ),
-        )
+        lats = [p[0] for p in posiciones]
+        lons = [p[1] for p in posiciones]
+        margen = 0.8
+        try:
+            mapa.fit_bounding_box(
+                (max(lats) + margen, min(lons) - margen),
+                (min(lats) - margen, max(lons) + margen),
+            )
+        except Exception:
+            mapa.set_position(sum(lats) / len(lats), sum(lons) / len(lons))
 
-        def par_spinboxes(m: tk.Misc) -> tk.Frame:
-            marco = tk.Frame(m, background=Paleta.SUPERFICIE)
-            marco.columnconfigure((0, 1), weight=1, uniform="par")
-            for columna, (texto, variable, minimo, maximo) in enumerate((
-                ("Cromosomas (N)", self.cantidad_cromosomas, 2, 500),
-                ("Ciclos (M)", self.cantidad_ciclos, 1, 5000),
-            )):
-                celda = tk.Frame(marco, background=Paleta.SUPERFICIE)
-                celda.grid(row=0, column=columna, sticky="ew", padx=(0 if columna == 0 else 10, 0))
-                ttk.Label(celda, text=texto, style="TarjetaCampo.TLabel").pack(anchor="w")
-                ttk.Spinbox(
-                    celda, from_=minimo, to=maximo, textvariable=variable, width=8
-                ).pack(fill="x", pady=(5, 0))
-            return marco
-
-        vista.agregar_widget(par_spinboxes)
-        vista.agregar_widget(
-            lambda m: SliderValor(m, "Frecuencia de crossover", self.frecuencia_crossover)
-        )
-        vista.agregar_widget(
-            lambda m: SliderValor(m, "Frecuencia de mutación", self.frecuencia_mutacion)
-        )
-        vista.agregar_campo(
-            "Semilla (opcional)",
-            lambda m: ttk.Entry(m, textvariable=self.semilla_genetica),
-            "Dejala vacía para obtener resultados distintos en cada ejecución.",
-        )
-        vista.guardar_texto_boton()
-        self.vista_2c = vista
-        return vista
-
-    # -- ejecucion en segundo plano --------------------------------------------
-    def _ejecutar_en_segundo_plano(
-        self,
-        vista: VistaEjercicio,
-        descripcion: str,
-        funcion: Callable[..., object],
-        argumentos: tuple,
-        al_terminar: Callable[[object], None],
-    ) -> None:
-        cola: queue.Queue[tuple[str, object]] = queue.Queue()
-        inicio = perf_counter()
-        vista.establecer_ocupado(True)
-        self._fijar_estado(f"{descripcion}…", ocupado=True)
-
-        def trabajo() -> None:
-            try:
-                cola.put(("ok", funcion(*argumentos)))
-            except Exception as error:  # noqa: BLE001 - se muestra al usuario
-                cola.put(("error", error))
-
-        def consultar() -> None:
-            try:
-                tipo, valor = cola.get_nowait()
-            except queue.Empty:
-                vista.estado(f"Ejecutando… {perf_counter() - inicio:.1f} s")
-                self.root.after(100, consultar)
-                return
-            vista.establecer_ocupado(False)
-            if tipo == "error":
-                vista.estado("La ejecución terminó con un error.")
-                self._fijar_estado("La ejecución terminó con un error.", error=True)
-                messagebox.showerror("Error de ejecución", str(valor))
-                return
-            al_terminar(valor)
-            vista.estado(f"Finalizado en {perf_counter() - inicio:.2f} s")
-            self._fijar_estado(f"{descripcion}: finalizado.")
-
-        threading.Thread(target=trabajo, daemon=True).start()
-        self.root.after(100, consultar)
-
-    def _fijar_estado(self, texto: str, ocupado: bool = False, error: bool = False) -> None:
-        self.estado.set(texto)
-        color = Paleta.ROJO if error else Paleta.AMBAR if ocupado else Paleta.TURQUESA
-        self.indicador_estado.configure(foreground=color)
-
-    # -- ejercicio 1: logica ---------------------------------------------------
     def resolver_ejercicio_1(self) -> None:
         try:
             cantidad = self.cantidad_ciudades.get()
@@ -777,142 +968,81 @@ class AplicacionTSP:
         except (tk.TclError, ValueError) as error:
             messagebox.showerror("Datos inválidos", str(error))
             return
-        self._ejecutar_en_segundo_plano(
-            self.vista_1, "Branch and Bound", ejecutar_algoritmo,
-            (self.algoritmo.get(), cantidad, procesos), self._mostrar_resultado,
-        )
 
-    def _mostrar_resultado(self, resultado: object) -> None:
+        self.boton_resolver.configure(state="disabled")
+        self.progreso_1.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+        self.progreso_1.start(10)
+        self.estado.set("Resolviendo...")
+        self._escribir_salida("Calculando resultado...\n")
+        parametros = self.algoritmo.get(), cantidad, procesos
+        threading.Thread(
+            target=self._trabajar,
+            args=parametros,
+            daemon=True,
+        ).start()
+        self.root.after(100, self._consultar_resultado)
+
+    def _trabajar(
+        self,
+        algoritmo: str,
+        cantidad: int,
+        procesos: int,
+    ) -> None:
+        try:
+            resultado = ejecutar_algoritmo(algoritmo, cantidad, procesos)
+            self.resultados.put(("ok", resultado))
+        except Exception as error:
+            self.resultados.put(("error", error))
+
+    def _consultar_resultado(self) -> None:
+        try:
+            tipo, valor = self.resultados.get_nowait()
+        except queue.Empty:
+            self.root.after(100, self._consultar_resultado)
+            return
+
+        self.progreso_1.stop()
+        self.progreso_1.grid_remove()
+        self.boton_resolver.configure(state="normal")
+        if tipo == "error":
+            self.estado.set("La ejecución terminó con un error.")
+            messagebox.showerror("Error de ejecución", str(valor))
+            return
+
+        resultado = valor
         if not isinstance(resultado, ResultadoGUI):
             raise TypeError("Resultado inesperado del algoritmo.")
+        self.estado.set("Ejecución finalizada.")
+        self._mostrar_resultado(resultado)
+
+    def _mostrar_resultado(self, resultado: ResultadoGUI) -> None:
         problema = crear_problema(resultado.cantidad_ciudades)
-        tiempo, unidad = formatear_segundos(resultado.segundos)
-        self.vista_1.metricas["tiempo"].unidad.configure(text=unidad)
-        total = resultado.nodos_explorados + resultado.nodos_podados
-        porcentaje = resultado.nodos_podados / total if total else 0
-        resumen = "\n".join((
-            f"Algoritmo: {resultado.algoritmo}",
-            f"Ciudades: {resultado.cantidad_ciudades}",
-            f"Distancia total: {resultado.ruta.distancia_total} km",
-            f"Tiempo de ejecución: {resultado.segundos:.6f} s",
-            f"Nodos explorados: {resultado.nodos_explorados}",
-            f"Nodos podados: {resultado.nodos_podados}",
-            "",
-            "Recorrido completo:",
-            texto_recorrido(resultado.ruta, problema),
-        ))
-        self.vista_1.mostrar_resultado(
-            resultado.ruta, problema,
-            {
-                "tiempo": (tiempo, resultado.algoritmo.replace("Branch and Bound ", "").capitalize()),
-                "explorados": (formatear_entero(resultado.nodos_explorados), f"{resultado.cantidad_ciudades} ciudades"),
-                "podados": (formatear_entero(resultado.nodos_podados), f"{porcentaje:.1%} de los nodos generados"),
-            },
-            resumen,
+        ciudades_nombres = resultado.ruta.nombres(problema)
+        nombres = "\n".join(
+            f"{indice + 1:2}. {nombre}" + (" (Regreso al inicio)" if indice == len(ciudades_nombres) - 1 else "")
+            for indice, nombre in enumerate(ciudades_nombres)
         )
+        salida = "\n".join(
+            (
+                "RESUMEN",
+                f"Algoritmo: {resultado.algoritmo}",
+                f"Ciudades: {resultado.cantidad_ciudades}",
+                f"Distancia total: {resultado.ruta.distancia_total} km",
+                f"Tiempo de ejecución: {resultado.segundos:.6f} s",
+                f"Nodos explorados: {resultado.nodos_explorados}",
+                f"Nodos podados: {resultado.nodos_podados}",
+                "",
+                "RECORRIDO COMPLETO",
+                nombres,
+            )
+        )
+        self._escribir_salida(salida)
 
-    # -- ejercicio 2.a: logica -------------------------------------------------
-    def resolver_ejercicio_2a(self) -> None:
-        ciudad = self.ciudad_inicial_heuristica.get()
-        if ciudad not in CAPITALES:
-            messagebox.showerror("Datos inválidos", "Seleccione una capital válida.")
-            return
-        self._ejecutar_en_segundo_plano(
-            self.vista_2a, "Vecino más cercano", ejecutar_heuristica,
-            (CAPITALES.index(ciudad),), self._mostrar_resultado_2a,
-        )
-
-    def _mostrar_resultado_2a(self, resultado: object) -> None:
-        if not isinstance(resultado, ResultadoHeuristicoGUI):
-            raise TypeError("Resultado inesperado de la heurística.")
-        problema = crear_problema(len(CAPITALES))
-        tramos = tramos_de(resultado.ruta, problema)
-        tiempo, unidad = formatear_segundos(resultado.segundos)
-        self.vista_2a.metricas["tiempo"].unidad.configure(text=unidad)
-        resumen = "\n".join((
-            "Algoritmo: Vecino más cercano",
-            f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
-            f"Distancia total: {resultado.ruta.distancia_total} km",
-            f"Tiempo de ejecución: {resultado.segundos:.6f} s",
-            "",
-            "Recorrido completo:",
-            texto_recorrido(resultado.ruta, problema),
-        ))
-        self.vista_2a.mostrar_resultado(
-            resultado.ruta, problema,
-            {
-                "tiempo": (tiempo, f"Desde {CAPITALES[resultado.ciudad_inicial]}"),
-                **self._metricas_tramos(tramos, resultado.ruta, problema),
-            },
-            resumen,
-        )
-
-    def _metricas_tramos(
-        self, tramos: list[int], ruta: RutaTSP, problema: ProblemaTSP
-    ) -> dict[str, tuple[str, str]]:
-        posicion = max(range(len(tramos)), key=tramos.__getitem__)
-        origen = problema.nombre_ciudad(ruta.recorrido[posicion])
-        destino = problema.nombre_ciudad(ruta.recorrido[posicion + 1])
-        return {
-            "maximo": (formatear_entero(tramos[posicion]), f"{origen} → {destino}"),
-            "promedio": (formatear_entero(round(sum(tramos) / len(tramos))), f"{len(tramos)} tramos"),
-        }
-
-    # -- ejercicio 2.c: logica -------------------------------------------------
-    def resolver_ejercicio_2c(self) -> None:
-        try:
-            cantidad = self.cantidad_cromosomas.get()
-            ciclos = self.cantidad_ciclos.get()
-            crossover = round(self.frecuencia_crossover.get(), 4)
-            mutacion = round(self.frecuencia_mutacion.get(), 4)
-            semilla_texto = self.semilla_genetica.get().strip()
-            semilla = int(semilla_texto) if semilla_texto else None
-            ConfiguracionGenetica(cantidad, ciclos, crossover, mutacion, semilla=semilla)
-        except (tk.TclError, ValueError) as error:
-            messagebox.showerror("Datos inválidos", str(error))
-            return
-        parametros = (
-            CAPITALES.index(self.ciudad_inicial_genetico.get()),
-            cantidad, ciclos, crossover, mutacion, semilla,
-        )
-        self._ejecutar_en_segundo_plano(
-            self.vista_2c, "Algoritmo genético", ejecutar_genetico,
-            parametros, self._mostrar_resultado_2c,
-        )
-
-    def _mostrar_resultado_2c(self, resultado: object) -> None:
-        if not isinstance(resultado, ResultadoGeneticoGUI):
-            raise TypeError("Resultado inesperado del algoritmo genético.")
-        problema = crear_problema(len(CAPITALES))
-        tramos = tramos_de(resultado.ruta, problema)
-        tiempo, unidad = formatear_segundos(resultado.segundos)
-        self.vista_2c.metricas["tiempo"].unidad.configure(text=unidad)
-        resumen = "\n".join((
-            "Algoritmo: Algoritmo genético",
-            f"Ciudad de partida: {CAPITALES[resultado.ciudad_inicial]}",
-            f"Cromosomas: {resultado.cantidad_cromosomas}",
-            f"Ciclos: {resultado.cantidad_ciclos}",
-            f"Crossover cíclico: {resultado.frecuencia_crossover:.0%}",
-            f"Mutación: {resultado.frecuencia_mutacion:.0%}",
-            f"Distancia total: {resultado.ruta.distancia_total} km",
-            f"Tiempo de ejecución: {resultado.segundos:.6f} s",
-            "",
-            "Mejor recorrido:",
-            texto_recorrido(resultado.ruta, problema),
-        ))
-        maximo = self._metricas_tramos(tramos, resultado.ruta, problema)["maximo"]
-        self.vista_2c.mostrar_resultado(
-            resultado.ruta, problema,
-            {
-                "tiempo": (tiempo, f"Desde {CAPITALES[resultado.ciudad_inicial]}"),
-                "maximo": maximo,
-                "evaluaciones": (
-                    f"{resultado.cantidad_cromosomas}×{resultado.cantidad_ciclos}",
-                    f"Crossover {resultado.frecuencia_crossover:.0%} · Mutación {resultado.frecuencia_mutacion:.0%}",
-                ),
-            },
-            resumen,
-        )
+    def _escribir_salida(self, texto: str) -> None:
+        self.salida.configure(state="normal")
+        self.salida.delete("1.0", tk.END)
+        self.salida.insert(tk.END, texto)
+        self.salida.configure(state="disabled")
 
 
 def lanzar_gui() -> None:
