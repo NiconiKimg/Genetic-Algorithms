@@ -62,7 +62,7 @@ def medir(algoritmo: str, problema: ProblemaTSP) -> Medicion:
 def main() -> None:
     """Ejecuta la batería de pruebas comparativas en instancias reducidas."""
     print("ciudades;algoritmo;segundos;distancia_km;nodos_explorados;nodos_podados")
-    for cantidad_ciudades in (8, 10, 12, 13):
+    for cantidad_ciudades in (8, 10, 12, 13, 15):
         problema = crear_subproblema(cantidad_ciudades)
         for algoritmo in ("secuencial", "paralelo"):
             medicion = medir(algoritmo, problema)

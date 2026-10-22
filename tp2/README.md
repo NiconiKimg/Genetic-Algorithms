@@ -1,13 +1,15 @@
-# Problema de la mochila
+[English](README.md) | [Español](README.es.md)
 
-Consiste en elegir, de entre un conjunto de **n elementos**, (cada uno con un valor $V_i$ y un volumen $V_i$), aquellos que puedan ser cargados en una mochila de volumen **V** de manera que el **valor obtenido sea máximo**.
+# Knapsack Problem
 
-Utilizando una computadora, resolver el siguiente problema:
+The 0/1 knapsack problem consists of selecting, from a given set of **$n$ items** (each with an associated value $V_i$ and volume $V_i$), a subset that fits within a knapsack of total capacity **$V$** such that the **total accumulated value is maximized**.
 
-> **Cuáles son los elementos de la lista siguiente que cargaremos en una mochila de 4200 cm³ de manera que su valor en $ sea máximo.**
+Using computational methods, solve the following problem:
 
-| Objeto | Volumen (cm³.) | Valor ($) |
-|:------:|---------------:|----------:|
+> **Determine which items from the list below should be loaded into a knapsack of capacity 4200 cm³ to maximize the total value in $.**
+
+| Item | Volume (cm³) | Value ($) |
+|:---:|:---:|:---:|
 | 1 | 150 | 20 |
 | 2 | 325 | 40 |
 | 3 | 600 | 50 |
@@ -19,28 +21,28 @@ Utilizando una computadora, resolver el siguiente problema:
 | 9 | 930 | 46 |
 | 10 | 353 | 28 |
 
-> **Volumen máximo soportado por la mochila:** **4200 cm³.**
+> **Maximum capacity supported by the knapsack:** **4200 cm³.**
 
 ---
 
-Para su solución, utilizar un **procedimiento exhaustivo** que consiste en evaluar para cada subconjunto de elementos el valor correspondiente y, posteriormente, **clasificando los subconjuntos por su valor de mayor a menor**, encontrar cuál es el subconjunto solución.
+To find the solution, implement an **exhaustive procedure** that evaluates every possible candidate subset, computes its corresponding value and feasibility, sorts all valid subsets in descending order of value, and identifies the optimal solution subset.
 
-## Ejercicios
+## Exercises
 
-1. Resolver el **problema de la Mochila utilizando una búsqueda exhaustiva**.
-2. Resolver el ejercicio anterior usando el **algoritmo greedy** y comentar su similitud o no con el exhaustivo.
-3. Plantear el problema de la mochila teniendo en cuenta los **pesos** en lugar del volumen. Luego, dados **3 elementos**, cuyos pesos son:
-   - 1800 grs.,
-   - 600 grs.
-   - y 1200 grs.
+1. Solve the **Knapsack problem using exhaustive search**.
+2. Solve the previous problem using the **greedy algorithm**, comparing its behavior, speed, and optimality with the exhaustive approach.
+3. Reformulate the knapsack problem considering **weight** instead of volume. Given **3 items** with the following weights:
+   - 1800 g,
+   - 600 g,
+   - and 1200 g,
 
-   y cuyos valores son:
+   and corresponding values:
    - $72,
-   - $36
-   - y $60 respectivamente,
+   - $36,
+   - and $60 respectively,
 
-   y con una mochila que puede soportar hasta **3000 grs.**, se pide:
+   with a knapsack capacity supporting up to **3000 g**, complete the following tasks:
 
-   A) Hallar una solución utilizando un **algoritmo goloso y exhaustivo**.
+   A) Find a solution using both **greedy and exhaustive algorithms**.
 
-   B) Analizar dicha solución respecto a su **grado de optimización** y elaborar las conclusiones que considere adecuadas.
+   B) Analyze each solution regarding its **degree of optimality** and formulate appropriate analytical conclusions.

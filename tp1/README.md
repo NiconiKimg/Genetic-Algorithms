@@ -1,84 +1,86 @@
-# ENUNCIADO DEL TRABAJO PRÁCTICO N° 1
+[English](README.md) | [Español](README.es.md)
 
-Hacer un programa que utilice un **Algoritmo Genético Canónico** para buscar un máximo de la función:
+# Practical Assignment No. 1
+
+Develop a program using a **Canonical Genetic Algorithm** to find a maximum of the objective function:
 
 $$
 f(x) = \left(\frac{x}{\text{coef}}\right)^2
 $$
 
-en el dominio $[0, 2^{30} - 1]$
+within the domain $[0, 2^{30} - 1]$
 
-donde $\text{coef} = 2^{30} - 1$
+where $\text{coef} = 2^{30} - 1$
 
-Teniendo en cuenta los siguientes datos:
+Considering the following input parameters:
 
-- **Probabilidad de Crossover:** 0,75
-- **Probabilidad de Mutación:** 0,05
-- **Población Inicial:** 10 individuos
-- **Ciclos del programa:** 20
-- **Método de Selección:** Ruleta
-- **Método de Crossover:** 1 Punto
-- **Método de Mutación:** invertida
-
----
-
-## Opción A
-
-El programa debe mostrar, finalmente:
-
-- El Cromosoma correspondiente al valor máximo
-- El valor máximo, mínimo y promedio obtenido de cada población
-- Calcular la desviación estándar del fitness por generación (esto muestra visualmente si la población converge —desviación baja— o si sigue diversa —desviación alta—).
-- Agregar explicaciones de lo observado en las conclusiones.
-- Medir el tiempo de cómputo
-- Agregar una tabla con tiempo de ejecución promedio para cada variante (20, 100, 200 corridas) y cada método (ruleta, torneo, elitismo). Analizar el trade-off (situación en la que se debe sacrificar un objetivo, característica o beneficio para alcanzar otro) entre calidad de solución y costo computacional.
-- Mostrar la impresión de las tablas de mínimos, promedios y máximos para 20, 100 y 200 corridas.
-- Presentar las gráficas de los valores Máximos, Mínimos y Promedios de la función objetivo por cada generación luego de correr el algoritmo genético 20, 100 y 200 iteraciones (una gráfica por cada conjunto de iteraciones)
-- Realizar comparaciones de las salidas corriendo el mismo programa en distintos ciclos de corridas y además realizar todos los cambios que considere oportunos en los parámetros de entrada de manera de enriquecer sus conclusiones.
+- **Crossover Probability:** 0.75
+- **Mutation Probability:** 0.05
+- **Initial Population:** 10 individuals
+- **Program Cycles (Generations):** 20
+- **Selection Method:** Roulette Wheel
+- **Crossover Method:** 1-Point
+- **Mutation Method:** Bit-inversion (bit-flip)
 
 ---
 
-## Opción B
+## Option A
 
-Aplicar lo enunciado en la opción A pero con **método de Selección de Torneo**.
+The program must display, upon termination:
 
----
-
-## Opción C
-
-Se entiende por **elite** a un grupo pequeño que por algún motivo, característica, facultad o privilegio es superior o mejor en comparación al grueso de una población determinada; con cualidades o prerrogativas de las que la gran mayoría no disfrutan.
-
-Un algoritmo genético, desde el punto de vista de la optimización, es un método poblacional de búsqueda dirigida basada en probabilidad. Bajo una condición bastante débil, que el algoritmo mantenga elitismo, es decir, guarde siempre al mejor elemento de la población sin hacerle ningún cambio, se puede demostrar que el algoritmo converge en probabilidad al óptimo. En otras palabras, al aumentar el número de iteraciones, la probabilidad de tener el óptimo en la población tiende a uno.
-
-Luego el método más utilizado para mejorar la convergencia de los algoritmos genéticos es el **elitismo**.
-
-Este método consiste básicamente para nuestro trabajo en realizar la etapa de selección de la siguiente manera:
-
-- Se realiza un muestreo en una élite de “ere” miembros, es decir, para nuestro ejercicio se seleccionan dos cromosomas que posean el mejor fitness de entre los mejores de la población inicial y se incorporan directamente a la población siguiente, sin pasar por la población intermedia.
-- El proceso se repite para cada población que se va generando hasta completar el número de veces que se ejecutará el algoritmo genético. Se solicita la ejecución de 100 iteraciones.
-
-Para esta tercera parte del trabajo se deberá utilizar elitismo, mostrar nuevamente las salidas por pantalla y las gráficas solicitadas en la PARTE A y B pero en este caso considerando la aplicación de elitismo. Resolver el ejercicio realizando 100 iteraciones del algoritmo.
-
-Comparar los tres métodos (ruleta, torneo, elitismo) en:
-
-- Mejor fitness alcanzado
-- Generación en la que se alcanzó
-- Estabilidad (desviación entre corridas)
-- Tiempo de ejecución
-
-También deberá hacer cambio de algunos de los datos de entrada y obtener conclusiones sobre los cambios efectuado según el equipo considere oportuno.
+- The chromosome corresponding to the maximum value found.
+- The maximum, minimum, and average values obtained for each population generation.
+- The standard deviation of fitness per generation (visually demonstrating population convergence - low deviation - or ongoing diversity - high deviation).
+- Analytical explanations of observed behavior in the conclusions.
+- Computation time measurement.
+- A table reporting average execution time for each iteration variant (20, 100, and 200 cycles) and each method (Roulette Wheel, Tournament, Elitism). Analyze the trade-off between solution quality and computational cost.
+- Printout of tables showing minimum, average, and maximum fitness values for 20, 100, and 200 cycles.
+- Comparative plots of Maximum, Minimum, and Average objective function values per generation across 20, 100, and 200 iterations (one graph per iteration count).
+- Comparative analysis running the program across different iteration counts, introducing appropriate adjustments to input parameters to enrich the experimental conclusions.
 
 ---
 
-## Formato para el informe final
+## Option B
 
-- **Introducción teórica** (AG canónico, elitismo)
-- **Descripción del problema y función objetivo**
-- **Parámetros fijos y variables** (tabla)
-- **Codificación y Resultados para Opción A** (ruleta)
-- **Codificación y Resultados para Opción B** (torneo)
-- **Codificación y Resultados para Opción C** (elitismo)
-- **Experimentos adicionales** (cambio de parámetros)
-- **Gráficas comparativas** (máximos, mínimos, promedios)
-- **Tabla resumen de estabilidad y tiempos**
-- **Conclusiones y recomendación final**
+Apply the requirements specified in Option A using the **Tournament Selection** method.
+
+---
+
+## Option C
+
+An **elite** is understood as a small group that, due to specific characteristics, fitness, or privileges, is superior compared to the bulk of a given population.
+
+From an optimization perspective, a genetic algorithm is a population-based directed search method governed by probability. Under the mild condition that the algorithm maintains elitism - preserving the best element in the population unchanged across generations - it can be formally proven that the algorithm converges in probability to the global optimum. In other words, as the number of iterations increases, the probability of containing the optimal solution within the population approaches one.
+
+Consequently, **elitism** is the most widely adopted technique to improve genetic algorithm convergence.
+
+In this assignment, elitism is implemented during selection as follows:
+
+- Sampling is performed over an elite of members: for this exercise, the two chromosomes exhibiting the highest fitness in the current population are selected and transferred directly into the subsequent generation, bypassing intermediate population sampling.
+- This process repeats for each generation until the designated number of iterations is completed. Execution of 100 iterations is requested.
+
+For this third part, implement elitism and output the console results and plots requested in Parts A and B under elitist preservation. Solve the problem executing 100 algorithm iterations.
+
+Compare all three methods (Roulette Wheel, Tournament, Elitism) across:
+
+- Best fitness achieved
+- Generation in which the best fitness was reached
+- Stability (standard deviation across runs)
+- Execution time
+
+Additionally, adjust selected input parameters to extract meaningful conclusions based on experimental findings.
+
+---
+
+## Final Report Format
+
+- **Theoretical Introduction** (Canonical GA, Elitism)
+- **Problem Description and Objective Function**
+- **Fixed and Variable Parameters** (summary table)
+- **Encoding and Results for Option A** (Roulette Wheel)
+- **Encoding and Results for Option B** (Tournament)
+- **Encoding and Results for Option C** (Elitism)
+- **Additional Experiments** (parameter sensitivity analysis)
+- **Comparative Plots** (maximum, minimum, average fitness)
+- **Summary Table of Stability and Execution Times**
+- **Conclusions and Final Recommendations**
